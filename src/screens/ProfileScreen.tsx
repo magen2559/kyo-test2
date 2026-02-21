@@ -9,13 +9,9 @@ import { theme } from '../theme';
 import { GlassHeader } from '../components/GlassHeader';
 import { IndustrialCard } from '../components/IndustrialCard';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../lib/supabase';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
-
-const PAST_BOOKINGS = [
-    { id: '1', date: 'SEP 15', title: 'TECHNO RITUAL', table: 'T-10', spend: 'RM 1500' },
-    { id: '2', date: 'AUG 28', title: 'BASEMENT ACID', table: 'SOFA-3', spend: 'RM 800' },
-];
 
 export const ProfileScreen = () => {
     const insets = useSafeAreaInsets();
@@ -23,13 +19,43 @@ export const ProfileScreen = () => {
     const navigation = useNavigation<ProfileScreenNavigationProp>();
 
     const [refreshing, setRefreshing] = React.useState(false);
+    const [bookings, setBookings] = React.useState<any[]>([]);
+    const [isAdmin, setIsAdmin] = React.useState(false);
 
-    const onRefresh = React.useCallback(() => {
+    const fetchBookings = async () => {
+        if (!user) return;
+
+        // Fetch is_admin status
+        const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single();
+
+        if (profileData) setIsAdmin(profileData.is_admin);
+
+        const { data, error } = await supabase
+            .from('reservations')
+            .select(`
+                *,
+                events ( title, date_label ),
+                venue_tables ( table_number )
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (data) setBookings(data);
+    };
+
+    React.useEffect(() => {
+        fetchBookings();
+    }, [user]);
+
+    const onRefresh = React.useCallback(async () => {
         setRefreshing(true);
-        setTimeout(() => {
-            setRefreshing(false);
-        }, 1500);
-    }, []);
+        await fetchBookings();
+        setRefreshing(false);
+    }, [user]);
 
     const userName = user?.user_metadata?.name || 'GUEST USER';
     const userEmail = user?.email || 'N/A';
@@ -65,27 +91,49 @@ export const ProfileScreen = () => {
                 </View>
 
                 {/* Booking History */}
-                <Text style={styles.sectionTitle}>RECENT BOOKINGS</Text>
+                <Text style={styles.sectionTitle}>MY PASSES & BOOKINGS</Text>
 
-                {PAST_BOOKINGS.map((booking) => (
-                    <IndustrialCard key={booking.id} style={styles.bookingCard}>
-                        <View style={styles.bookingRow}>
-                            <View>
-                                <Text style={styles.bookingDate}>{booking.date}</Text>
-                                <Text style={styles.bookingTitle}>{booking.title}</Text>
+                {bookings.length === 0 && (
+                    <Text style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>No bookings found.</Text>
+                )}
+
+                {bookings.map((booking) => {
+                    const isWalkIn = booking.type === 'WALK_IN';
+                    const title = isWalkIn ? 'WALK-IN ENTRY' : booking.events?.title || 'EVENT';
+                    const date = isWalkIn ? new Date(booking.created_at).toLocaleDateString() : booking.events?.date_label?.replace('\n', ' ');
+                    const table = isWalkIn ? 'ENTRY ONLY' : booking.venue_tables?.table_number || 'TBA';
+
+                    return (
+                        <IndustrialCard key={booking.id} style={styles.bookingCard}>
+                            <View style={styles.bookingRow}>
+                                <View>
+                                    <Text style={styles.bookingDate}>{date}</Text>
+                                    <Text style={styles.bookingTitle}>{title}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={styles.bookingSpend}>RM {booking.total_amount}</Text>
+                                    <Text style={styles.bookingTable}>{table}</Text>
+                                </View>
                             </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={styles.bookingSpend}>{booking.spend}</Text>
-                                <Text style={styles.bookingTable}>{booking.table}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.divider} />
-                        <TouchableOpacity style={styles.receiptBtn}>
-                            <Text style={styles.receiptText}>VIEW RECEIPT</Text>
-                            <Ionicons name="receipt-outline" size={14} color={theme.colors.primary} />
-                        </TouchableOpacity>
-                    </IndustrialCard>
-                ))}
+                            <View style={styles.divider} />
+                            <TouchableOpacity
+                                style={styles.receiptBtn}
+                                onPress={() => navigation.navigate('DigitalPass' as never, {
+                                    bookingId: booking.id.substring(0, 8).toUpperCase(),
+                                    qrData: booking.qr_code_data,
+                                    type: isWalkIn ? 'WALK-IN ENTRY' : 'VIP TABLE',
+                                    guests: booking.guests,
+                                    date: date,
+                                    // Only attach timestamp for walk-ins so the timer runs
+                                    timestamp: isWalkIn ? new Date(booking.created_at).getTime() : undefined
+                                } as never)}
+                            >
+                                <Text style={styles.receiptText}>VIEW DIGITAL PASS</Text>
+                                <Ionicons name="qr-code-outline" size={14} color={theme.colors.primary} />
+                            </TouchableOpacity>
+                        </IndustrialCard>
+                    );
+                })}
 
                 {/* Saved Payments */}
                 <Text style={[styles.sectionTitle, { marginTop: 16 }]}>SAVED PAYMENTS</Text>
@@ -102,6 +150,21 @@ export const ProfileScreen = () => {
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                 </IndustrialCard>
+
+                {isAdmin && (
+                    <TouchableOpacity
+                        style={[styles.settingsLauncher, { backgroundColor: 'rgba(197, 160, 89, 0.1)', borderColor: theme.colors.primary, marginTop: 16 }]}
+                        onPress={() => navigation.navigate('AdminDashboard' as any)}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.primary} />
+                            <Text style={[styles.settingsLauncherText, { color: theme.colors.primary }]}>ADMIN PANEL</Text>
+                        </View>
+                        <View style={styles.adminBadge}>
+                            <Text style={styles.adminBadgeText}>STAFF</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                     style={styles.settingsLauncher}
@@ -271,5 +334,16 @@ const styles = StyleSheet.create({
         fontFamily: theme.typography.fontFamily.medium,
         fontSize: 14,
         letterSpacing: 1,
+    },
+    adminBadge: {
+        backgroundColor: theme.colors.primary,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    adminBadgeText: {
+        color: '#000',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 10,
     },
 });

@@ -11,6 +11,7 @@ import { generateWhatsAppLink } from '../utils/whatsapp';
 import { Linking } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { AlertModal } from '../components/Modals';
+import { supabase } from '../lib/supabase';
 
 interface CheckoutRouteParams {
     tableNumber: string;
@@ -109,37 +110,60 @@ export const CheckoutScreen = () => {
         }
     };
 
-    const handlePayment = () => {
+    const handlePayment = async () => {
         setIsProcessing(true);
 
-        setTimeout(() => {
-            setIsProcessing(false);
-            const userName = user?.user_metadata?.name || 'VIP Guest';
-            const userPhone = user?.user_metadata?.phone || '+60123456789';
+        const userName = user?.user_metadata?.name || 'VIP Guest';
+        const userPhone = user?.user_metadata?.phone || '+60123456789';
 
-            const waLink = generateWhatsAppLink(
-                userName,
-                userPhone,
-                params.tableNumber,
-                params.date,
-                params.time,
-                depositAmount
-            );
+        const bookingId = `BK-${Date.now()}`;
+        const qrData = `kyo-${bookingId}-${user?.id || 'guest'}`;
 
+        const { error } = await supabase.from('reservations').insert({
+            user_id: user?.id || null,
+            guests: guestCount,
+            total_amount: subtotal,
+            deposit_paid: depositAmount,
+            type: 'TABLE',
+            status: 'CONFIRMED',
+            qr_code_data: qrData
+        });
+
+        setIsProcessing(false);
+
+        if (error) {
             setAlertConfig({
-                title: 'PAYMENT SUCCESSFUL',
-                message: 'Your deposit has been received. You will now be redirected to WhatsApp to complete your reservation.',
-                type: 'success',
-                onClose: () => {
-                    setAlertVisible(false);
-                    Linking.openURL(waLink).catch(err => {
-                        console.error("Couldn't open WhatsApp", err);
-                    });
-                    navigation.goBack();
-                }
+                title: 'BOOKING FAILED',
+                message: error.message || 'There was an error saving your booking. Please try again.',
+                type: 'error',
+                onClose: () => setAlertVisible(false)
             });
             setAlertVisible(true);
-        }, 2000);
+            return;
+        }
+
+        const waLink = generateWhatsAppLink(
+            userName,
+            userPhone,
+            params.tableNumber,
+            params.date,
+            params.time,
+            depositAmount
+        );
+
+        setAlertConfig({
+            title: 'PAYMENT SUCCESSFUL',
+            message: 'Your deposit has been received. You will now be redirected to WhatsApp to complete your reservation.',
+            type: 'success',
+            onClose: () => {
+                setAlertVisible(false);
+                Linking.openURL(waLink).catch(err => {
+                    console.error("Couldn't open WhatsApp", err);
+                });
+                navigation.goBack();
+            }
+        });
+        setAlertVisible(true);
     };
 
     return (

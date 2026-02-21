@@ -7,38 +7,9 @@ import { RootStackParamList, EventItem } from '../navigation/RootNavigator';
 import { theme } from '../theme';
 import { GlassHeader } from '../components/GlassHeader';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../lib/supabase';
 
 type LineupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
-
-const EVENT_DATA: EventItem[] = [
-    {
-        id: '1',
-        date: 'OCT\n24',
-        title: 'TECHNO RITUAL',
-        stage: 'MAIN ROOM',
-        bpm: '135 BPM',
-        image: 'https://images.unsplash.com/photo-1574391884720-bbc3740c59d1?q=80&w=1548&auto=format&fit=crop',
-        status: 'LIMITED',
-    },
-    {
-        id: '2',
-        date: 'OCT\n25',
-        title: 'CARBON FACTORY',
-        stage: 'BASEMENT',
-        bpm: '140 BPM',
-        image: 'https://images.unsplash.com/photo-1558369178-6556d97855d0?q=80&w=1548&auto=format&fit=crop',
-        status: 'SOLD OUT',
-    },
-    {
-        id: '3',
-        date: 'OCT\n31',
-        title: 'ACID HALLOWEEN',
-        stage: 'MAIN ROOM',
-        bpm: '138+ BPM',
-        image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1548&auto=format&fit=crop',
-        status: 'AVAILABLE',
-    },
-];
 
 const FILTERS = ['ALL SESSIONS', 'TECHNO', 'INDUSTRIAL', 'HOUSE'];
 
@@ -49,12 +20,29 @@ export const LineupScreen = () => {
     const [activeFilter, setActiveFilter] = useState('ALL SESSIONS');
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [events, setEvents] = useState<EventItem[]>([]);
 
-    const onRefresh = React.useCallback(() => {
+    const fetchEvents = async () => {
+        const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (data) {
+            setEvents(data);
+        } else if (error) {
+            console.error('Error fetching events:', error);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchEvents();
+    }, []);
+
+    const onRefresh = React.useCallback(async () => {
         setRefreshing(true);
-        setTimeout(() => {
-            setRefreshing(false);
-        }, 1500);
+        await fetchEvents();
+        setRefreshing(false);
     }, []);
 
     const renderEvent = (event: EventItem) => (
@@ -72,7 +60,7 @@ export const LineupScreen = () => {
                 <View style={styles.eventOverlay}>
                     <View style={styles.eventHeaderRow}>
                         <View style={styles.dateBadge}>
-                            <Text style={styles.dateText}>{event.date}</Text>
+                            <Text style={styles.dateText}>{event.date_label}</Text>
                         </View>
                         {event.status !== 'AVAILABLE' && (
                             <View style={[
@@ -101,7 +89,7 @@ export const LineupScreen = () => {
         </TouchableOpacity>
     );
 
-    const filteredEvents = EVENT_DATA.filter(event =>
+    const filteredEvents = events.filter(event =>
         event.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 

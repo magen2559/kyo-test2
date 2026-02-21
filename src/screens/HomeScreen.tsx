@@ -4,21 +4,40 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { GlassHeader } from '../components/GlassHeader';
 import { IndustrialCard } from '../components/IndustrialCard';
-import { GoldButton } from '../components/GoldButton';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../lib/supabase';
+import { EventItem } from '../navigation/RootNavigator';
+import { useNavigation } from '@react-navigation/native';
 
 export const HomeScreen = () => {
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation();
+    const [events, setEvents] = React.useState<EventItem[]>([]);
 
-    const renderEventCard = (title: string, date: string, limited: boolean) => (
-        <IndustrialCard style={styles.eventCard}>
-            <View style={styles.eventImagePlaceholder} />
+    React.useEffect(() => {
+        const fetchTopEvents = async () => {
+            const { data, error } = await supabase
+                .from('events')
+                .select('*')
+                .limit(3)
+                .order('created_at', { ascending: true });
+            if (data) setEvents(data);
+        };
+        fetchTopEvents();
+    }, []);
+
+    const renderEventCard = (event: EventItem) => (
+        <IndustrialCard key={event.id} style={styles.eventCard}>
+            <View style={styles.eventImagePlaceholder}>
+                <Image source={{ uri: event.image }} style={StyleSheet.absoluteFillObject} />
+                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+            </View>
             <View style={styles.eventDetails}>
-                <Text style={styles.eventDate}>{date}</Text>
-                <Text style={styles.eventTitle}>{title}</Text>
-                {limited && (
-                    <View style={styles.limitedTag}>
-                        <Text style={styles.limitedText}>LIMITED</Text>
+                <Text style={styles.eventDate}>{event.date_label.replace('\n', ' ')}</Text>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                {event.status !== 'AVAILABLE' && (
+                    <View style={[styles.limitedTag, event.status === 'SOLD OUT' && { backgroundColor: '#333' }]}>
+                        <Text style={[styles.limitedText, event.status === 'SOLD OUT' && { color: theme.colors.textSecondary }]}>{event.status}</Text>
                     </View>
                 )}
                 <View style={styles.bookNowContainer}>
@@ -45,9 +64,17 @@ export const HomeScreen = () => {
                     <View style={styles.heroOverlay}>
                         <Text style={styles.heroTitle}>ABOUT US</Text>
                         <Text style={styles.heroSubtitle}>Experience the raw industrial energy of KL's most exclusive underground sanctuary.</Text>
-                        <TouchableOpacity style={styles.outlineButton}>
-                            <Text style={styles.outlineButtonText}>VIEW MORE</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                                style={[styles.outlineButton, { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
+                                onPress={() => navigation.navigate('WalkIn' as never)}
+                            >
+                                <Text style={[styles.outlineButtonText, { color: '#000' }]}>GET WALK-IN PASS</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.outlineButton}>
+                                <Text style={styles.outlineButtonText}>VIEW MORE</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
@@ -55,9 +82,11 @@ export const HomeScreen = () => {
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>UPCOMING EVENTS</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
-                        {renderEventCard('TECHNO TUESDAYS', 'OCT 24', false)}
-                        {renderEventCard('DEEP HOUSE SESSIONS', 'OCT 25', true)}
-                        {renderEventCard('INDUSTRIAL NIGHT', 'OCT 31', false)}
+                        {events.length > 0 ? (
+                            events.map(event => renderEventCard(event))
+                        ) : (
+                            <Text style={{ color: theme.colors.textSecondary, marginLeft: 20 }}>Loading events...</Text>
+                        )}
                     </ScrollView>
                 </View>
 

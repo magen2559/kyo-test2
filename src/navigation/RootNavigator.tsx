@@ -14,11 +14,14 @@ import { EventDetailScreen } from '../screens/EventDetailScreen';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
 import { VIPScreen } from '../screens/VIPScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { WalkInScreen } from '../screens/WalkInScreen';
+import { DigitalPassScreen } from '../screens/DigitalPassScreen';
+import { AdminDashboardScreen } from '../screens/AdminDashboardScreen';
 import { theme } from '../theme';
 
 export interface EventItem {
     id: string;
-    date: string;
+    date_label: string;
     title: string;
     stage: string;
     bpm: string;
@@ -39,6 +42,16 @@ export type RootStackParamList = {
         time: string;
         minSpend: number;
     };
+    WalkIn: undefined;
+    DigitalPass: {
+        bookingId: string;
+        qrData: string;
+        type: string;
+        guests: number;
+        date: string;
+        timestamp?: number;
+    };
+    AdminDashboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -121,6 +134,21 @@ export const RootNavigator = () => {
                             name="Checkout"
                             component={CheckoutScreen}
                             options={{ headerShown: false, presentation: 'fullScreenModal' }}
+                        />
+                        <Stack.Screen
+                            name="WalkIn"
+                            component={WalkInScreen}
+                            options={{ headerShown: false, presentation: 'modal' }}
+                        />
+                        <Stack.Screen
+                            name="DigitalPass"
+                            component={DigitalPassScreen}
+                            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+                        />
+                        <Stack.Screen
+                            name="AdminDashboard"
+                            component={AdminDashboardScreen}
+                            options={{ headerShown: false }}
                         />
                     </>
                 ) : (

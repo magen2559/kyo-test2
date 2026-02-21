@@ -8,6 +8,7 @@ export const colors = {
     surface: 'rgba(255, 255, 255, 0.05)', // For glassmorphism
     border: '#C5A059', // 1px solid gold border from Stitch UI
     neonGlow: '#8A2BE2', // Electric violet for neon glow
+    error: '#FF3B30', // Red for errors or destructive actions
 };
 
 export const typography = {

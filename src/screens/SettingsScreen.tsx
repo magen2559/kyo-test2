@@ -7,6 +7,7 @@ import { GlassHeader } from '../components/GlassHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmModal } from '../components/Modals';
+import { scheduleLocalFOMOAlert } from '../utils/notifications';
 
 const SETTING_ITEMS = [
     { id: 'notifications', title: 'PUSH NOTIFICATIONS', type: 'toggle', value: true },
@@ -73,6 +74,20 @@ export const SettingsScreen = () => {
                             {index < SETTING_ITEMS.length - 1 && <View style={styles.divider} />}
                         </View>
                     ))}
+                </View>
+
+                {/* Developer Tools to Test Push Notifications */}
+                <View style={styles.dangerZone}>
+                    <Text style={styles.sectionHeader}>DEVELOPER TOOLS</Text>
+                    <View style={styles.section}>
+                        <TouchableOpacity
+                            style={styles.settingRow}
+                            onPress={() => scheduleLocalFOMOAlert()}
+                        >
+                            <Text style={styles.settingTitle}>TEST FOMO ALERT</Text>
+                            <Ionicons name="notifications-outline" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.dangerZone}>
