@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Linking } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootNavigator';
 import { theme } from '../theme';
 import { GlassmorphismView } from '../components/GlassmorphismView';
+import { GoldButton } from '../components/GoldButton';
+import { DateTimePicker } from '../components/DateTimePicker';
 import { supabase } from '../lib/supabase';
+
+type MapScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
 export interface TableData {
     id: string;
@@ -13,9 +20,15 @@ export interface TableData {
 }
 
 export const MapScreen = () => {
+    const navigation = useNavigation<MapScreenNavigationProp>();
     const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
     const [tables, setTables] = useState<TableData[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Booking Flow State
+    const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+    const [bookingDate, setBookingDate] = useState<string | null>(null);
+    const [bookingTime, setBookingTime] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTables();
@@ -48,6 +61,32 @@ export const MapScreen = () => {
 
     const handleTableSelect = (table: TableData) => {
         setSelectedTable(table);
+        // Reset date/time when selecting a new table
+        setBookingDate(null);
+        setBookingTime(null);
+    };
+
+    const handleDateConfirm = (date: string, time: string) => {
+        setBookingDate(date);
+        setBookingTime(time);
+        setDatePickerVisible(false);
+    };
+
+    const openBottleMenu = () => {
+        // Placeholder link to a PDF menu
+        Linking.openURL('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf');
+    };
+
+    const handleProceedToCheckout = () => {
+        if (!selectedTable || !bookingDate || !bookingTime) return;
+
+        navigation.navigate('Checkout', {
+            tableNumber: selectedTable.table_number,
+            capacity: selectedTable.capacity || 6,
+            date: bookingDate,
+            time: bookingTime,
+            minSpend: 2000 // In a real app, this comes from the table data
+        });
     };
 
     const renderTableItem = ({ item }: { item: TableData }) => {
@@ -90,28 +129,53 @@ export const MapScreen = () => {
                 />
             )}
 
-            {/* Overlay Booking Information */}
+            {/* Overlay Booking Information (Sticky Footer) */}
             {selectedTable && (
-                <View style={styles.overlayContainer}>
-                    <GlassmorphismView neonBorder style={styles.overlayCard}>
+                <View style={styles.stickyFooterContainer}>
+                    <View style={styles.stickyFooterContent}>
                         <View style={styles.overlayHeader}>
                             <View>
                                 <Text style={styles.heading}>TABLE {selectedTable.table_number.toUpperCase()}</Text>
-                                <Text style={styles.subtitle}>Capacity: {selectedTable.capacity || 6} Pax</Text>
+                                <Text style={styles.subtitle}>PRIVATE VIP AREA • {selectedTable.capacity || 6} PAX</Text>
+                                {bookingDate && bookingTime && (
+                                    <Text style={styles.timeLine}>{bookingDate} @ {bookingTime}</Text>
+                                )}
                             </View>
                             <TouchableOpacity onPress={() => setSelectedTable(null)}>
                                 <Text style={styles.cancelText}>✕</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.price}>Min Spend: RM 2,000</Text>
+                        <Text style={styles.price}>RM 2,000.00</Text>
 
-                        <TouchableOpacity style={styles.button}>
-                            <Text style={styles.buttonText}>BOOK NOW</Text>
-                        </TouchableOpacity>
-                    </GlassmorphismView>
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={styles.menuGhostButton} onPress={openBottleMenu}>
+                                <Text style={styles.menuGhostText}>VIEW BOTTLE MENU</Text>
+                            </TouchableOpacity>
+
+                            {(!bookingDate || !bookingTime) ? (
+                                <GoldButton
+                                    title="SELECT DATE & TIME"
+                                    onPress={() => setDatePickerVisible(true)}
+                                    style={styles.flexButton}
+                                />
+                            ) : (
+                                <GoldButton
+                                    title="PROCEED TO CHECKOUT"
+                                    onPress={handleProceedToCheckout}
+                                    style={styles.flexButton}
+                                />
+                            )}
+                        </View>
+                    </View>
                 </View>
             )}
+
+            <DateTimePicker
+                visible={isDatePickerVisible}
+                onClose={() => setDatePickerVisible(false)}
+                onConfirm={handleDateConfirm}
+            />
         </View>
     );
 };
@@ -177,14 +241,18 @@ const styles = StyleSheet.create({
         fontFamily: theme.typography.fontFamily.medium,
         fontSize: 14,
     },
-    overlayContainer: {
+    stickyFooterContainer: {
         position: 'absolute',
-        bottom: 24,
-        left: 24,
-        right: 24,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: theme.colors.backgroundSecondary,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.primary,
+        paddingBottom: 24, // extra padding for safe area
     },
-    overlayCard: {
-        padding: 20,
+    stickyFooterContent: {
+        padding: 24,
     },
     overlayHeader: {
         flexDirection: 'row',
@@ -197,28 +265,47 @@ const styles = StyleSheet.create({
         fontFamily: theme.typography.fontFamily.heading,
         fontSize: 24,
         marginBottom: 4,
+        letterSpacing: 1,
     },
     subtitle: {
         color: theme.colors.textSecondary,
-        fontFamily: theme.typography.fontFamily.regular,
-        fontSize: 14,
+        fontFamily: theme.typography.fontFamily.monospace,
+        fontSize: 12,
+        letterSpacing: 1,
     },
     price: {
         color: theme.colors.primary,
-        fontFamily: theme.typography.fontFamily.bold,
-        fontSize: 18,
-        marginBottom: 16,
+        fontFamily: theme.typography.fontFamily.heading,
+        fontSize: 32,
+        marginBottom: 20,
     },
-    button: {
-        backgroundColor: theme.colors.primary,
-        paddingVertical: 12,
-        borderRadius: 8,
+    actionRow: {
+        flexDirection: 'row',
+        gap: 12,
         alignItems: 'center',
     },
-    buttonText: {
-        color: theme.colors.background,
+    flexButton: {
+        flex: 1,
+    },
+    menuGhostButton: {
+        flex: 0.8,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    menuGhostText: {
+        color: theme.colors.primary,
         fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 10,
+        letterSpacing: 0.5,
+    },
+    timeLine: {
+        color: theme.colors.primary,
+        fontFamily: theme.typography.fontFamily.monospace,
         fontSize: 14,
+        marginTop: 8,
     },
     cancelText: {
         color: theme.colors.textSecondary,

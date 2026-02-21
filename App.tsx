@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import { Montserrat_700Bold } from '@expo-google-fonts/montserrat';
+import { RobotoMono_400Regular } from '@expo-google-fonts/roboto-mono';
 import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { theme } from './src/theme';
@@ -13,6 +14,7 @@ export default function App() {
     'Inter-Medium': Inter_500Medium,
     'Inter-Bold': Inter_700Bold,
     'Montserrat-Bold': Montserrat_700Bold,
+    'RobotoMono-Regular': RobotoMono_400Regular,
   });
 
   if (!fontsLoaded) {

@@ -6,7 +6,8 @@ type AuthContextType = {
     session: Session | null;
     user: User | null;
     isLoading: boolean;
-    signIn: () => Promise<void>;
+    signIn: (email: string, password: string) => Promise<{ error: any }>;
+    signUp: (email: string, password: string, name: string) => Promise<{ error: any, data?: any }>;
     signOut: () => Promise<void>;
 };
 
@@ -14,7 +15,8 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     user: null,
     isLoading: true,
-    signIn: async () => { },
+    signIn: async () => ({ error: null }),
+    signUp: async () => ({ error: null }),
     signOut: async () => { },
 });
 
@@ -40,14 +42,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => subscription.unsubscribe();
     }, []);
 
-    // Dummy sign in for demo purposes until real backend is hooked up
-    const signIn = async () => {
-        // In a real app, this would use supabase.auth.signInWithPassword
-        // Mocking auth state change for UI demo
-        const mockUser = { id: 'dummy-123', email: 'vip@kyoclub.com' } as User;
-        setUser(mockUser);
-        setSession({ access_token: 'dummy', refresh_token: 'dummy', expires_in: 3600, expires_at: 0, token_type: 'bearer', user: mockUser } as Session);
-        setIsLoading(false);
+    const signIn = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+        return { error };
+    };
+
+    const signUp = async (email: string, password: string, name: string) => {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    name,
+                }
+            }
+        });
+        return { error, data };
     };
 
     const signOut = async () => {
@@ -57,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ session, user, isLoading, signIn, signOut }}>
+        <AuthContext.Provider value={{ session, user, isLoading, signIn, signUp, signOut }}>
             {children}
         </AuthContext.Provider>
     );
