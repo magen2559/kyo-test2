@@ -17,6 +17,7 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { WalkInScreen } from '../screens/WalkInScreen';
 import { DigitalPassScreen } from '../screens/DigitalPassScreen';
 import { AdminDashboardScreen } from '../screens/AdminDashboardScreen';
+import { AboutScreen } from '../screens/AboutScreen';
 import { theme } from '../theme';
 
 export interface EventItem {
@@ -43,6 +44,7 @@ export type RootStackParamList = {
         minSpend: number;
     };
     WalkIn: undefined;
+    About: undefined;
     DigitalPass: {
         bookingId: string;
         qrData: string;
@@ -139,6 +141,11 @@ export const RootNavigator = () => {
                             name="WalkIn"
                             component={WalkInScreen}
                             options={{ headerShown: false, presentation: 'modal' }}
+                        />
+                        <Stack.Screen
+                            name="About"
+                            component={AboutScreen}
+                            options={{ headerShown: false }}
                         />
                         <Stack.Screen
                             name="DigitalPass"

@@ -1,0 +1,17 @@
+﻿env: load .env
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY
+Starting project at C:\Users\daniel\Desktop\kyo\kyo-test2
+Starting Metro Bundler
+node.exe : CommandError: TypeError: Cannot read properties of 
+undefined (reading 'body')
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (CommandError: T. 
+   ..reading 'body'):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Check the Ngrok status page for outages: 
+https://status.ngrok.com/

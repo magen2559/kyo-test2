@@ -1,18 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 
 interface GlassHeaderProps {
-    title: string;
+    title?: string;
+    showLogo?: boolean;
     onLeftPress?: () => void;
     leftIcon?: keyof typeof Ionicons.glyphMap;
     rightElement?: React.ReactNode;
 }
 
-export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, onLeftPress, leftIcon, rightElement }) => {
+export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, showLogo, onLeftPress, leftIcon, rightElement }) => {
     const insets = useSafeAreaInsets();
 
     return (
@@ -30,7 +31,11 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, onLeftPress, le
                     <View style={styles.iconPlaceholder} />
                 )}
 
-                <Text style={styles.title}>{title.toUpperCase()}</Text>
+                {showLogo ? (
+                    <Image source={require('../../assets/kyo-logo.png')} style={styles.logo} />
+                ) : (
+                    <Text style={styles.title}>{title?.toUpperCase()}</Text>
+                )}
 
                 {rightElement ? (
                     <View style={styles.iconButton}>
@@ -73,6 +78,11 @@ const styles = StyleSheet.create({
     },
     iconPlaceholder: {
         width: 40,
+    },
+    logo: {
+        height: 32,
+        width: 120,
+        resizeMode: 'contain',
     },
     bottomBorder: {
         height: 1,

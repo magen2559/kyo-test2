@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Image, ImageBackground } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../theme';
 import { GlassmorphismView } from '../components/GlassmorphismView';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type AuthScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Auth'>;
 
@@ -33,99 +34,111 @@ export const LoginScreen = () => {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <ImageBackground
+            source={require('../../assets/login-bg-v2.png')}
+            style={styles.backgroundImage}
+            resizeMode="cover"
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <GlassmorphismView neonBorder style={styles.card}>
-                    <Text style={styles.heading}>KYO</Text>
-                    <Text style={styles.subtitle}>VIP ACCESS</Text>
+            <LinearGradient
+                colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
+                style={StyleSheet.absoluteFillObject}
+            />
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <GlassmorphismView style={styles.card}>
+                        <Image source={require('../../assets/kyo-logo.png')} style={styles.logo} />
 
-                    {errorMsg ? <Text style={styles.errorText}>{errorMsg.toUpperCase()}</Text> : null}
+                        {errorMsg ? <Text style={styles.errorText}>{errorMsg.toUpperCase()}</Text> : null}
 
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="EMAIL OR PHONE"
-                            placeholderTextColor={theme.colors.textSecondary}
-                            value={identifier}
-                            onChangeText={setIdentifier}
-                            autoCapitalize="none"
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="EMAIL OR PHONE"
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={identifier}
+                                onChangeText={setIdentifier}
+                                autoCapitalize="none"
+                            />
+
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="PASSWORD"
+                                    placeholderTextColor={theme.colors.textSecondary}
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                                <TouchableOpacity
+                                    style={styles.eyeIcon}
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                        size={20}
+                                        color={theme.colors.textSecondary}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity style={styles.forgotPassword}>
+                            <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
+                        </TouchableOpacity>
+
+                        <GoldButton
+                            title={isLoading ? "AUTHENTICATING..." : "LOGIN"}
+                            onPress={handleLogin}
+                            disabled={!identifier || !password || isLoading}
+                            style={[styles.loginButton, (!identifier || !password || isLoading) && styles.buttonDisabled]}
                         />
 
-                        <View style={styles.passwordContainer}>
-                            <TextInput
-                                style={styles.passwordInput}
-                                placeholder="PASSWORD"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                secureTextEntry={!showPassword}
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                            <TouchableOpacity
-                                style={styles.eyeIcon}
-                                onPress={() => setShowPassword(!showPassword)}
-                            >
-                                <Ionicons
-                                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                                    size={20}
-                                    color={theme.colors.textSecondary}
-                                />
-                            </TouchableOpacity>
+                        <View style={styles.dividerContainer}>
+                            <View style={styles.divider} />
+                            <Text style={styles.dividerText}>OR</Text>
+                            <View style={styles.divider} />
                         </View>
+
+                        <TouchableOpacity style={styles.socialButton}>
+                            <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
+                            <Text style={styles.socialButtonText}>CONTINUE WITH APPLE</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.socialButton}>
+                            <Ionicons name="logo-google" size={20} color={theme.colors.text} />
+                            <Text style={styles.socialButtonText}>CONTINUE WITH GOOGLE</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.signUpContainer}
+                            onPress={() => navigation.navigate('SignUp')}
+                        >
+                            <Text style={styles.signUpText}>DON'T HAVE AN ACCOUNT? <Text style={styles.signUpLink}>SIGN UP</Text></Text>
+                        </TouchableOpacity>
+                    </GlassmorphismView>
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>
+                            BY LOGGING IN, YOU AGREE TO OUR{'\n'}
+                            <Text style={styles.footerLink}>TERMS OF SERVICE</Text> & <Text style={styles.footerLink}>PRIVACY POLICY</Text>
+                        </Text>
                     </View>
-
-                    <TouchableOpacity style={styles.forgotPassword}>
-                        <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
-                    </TouchableOpacity>
-
-                    <GoldButton
-                        title={isLoading ? "AUTHENTICATING..." : "LOGIN"}
-                        onPress={handleLogin}
-                        disabled={!identifier || !password || isLoading}
-                        style={[styles.loginButton, (!identifier || !password || isLoading) && styles.buttonDisabled]}
-                    />
-
-                    <View style={styles.dividerContainer}>
-                        <View style={styles.divider} />
-                        <Text style={styles.dividerText}>OR</Text>
-                        <View style={styles.divider} />
-                    </View>
-
-                    <TouchableOpacity style={styles.socialButton}>
-                        <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
-                        <Text style={styles.socialButtonText}>CONTINUE WITH APPLE</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.socialButton}>
-                        <Ionicons name="logo-google" size={20} color={theme.colors.text} />
-                        <Text style={styles.socialButtonText}>CONTINUE WITH GOOGLE</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.signUpContainer}
-                        onPress={() => navigation.navigate('SignUp')}
-                    >
-                        <Text style={styles.signUpText}>DON'T HAVE AN ACCOUNT? <Text style={styles.signUpLink}>SIGN UP</Text></Text>
-                    </TouchableOpacity>
-                </GlassmorphismView>
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>
-                        BY LOGGING IN, YOU AGREE TO OUR{'\n'}
-                        <Text style={styles.footerLink}>TERMS OF SERVICE</Text> & <Text style={styles.footerLink}>PRIVACY POLICY</Text>
-                    </Text>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </ImageBackground>
     );
 };
 
 const styles = StyleSheet.create({
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+    },
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     scrollContent: {
         flexGrow: 1,
@@ -136,18 +149,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 48,
         paddingHorizontal: 24,
+        backgroundColor: 'rgba(0, 0, 0, 0.35)',
     },
-    heading: {
-        color: theme.colors.primary,
-        fontFamily: theme.typography.fontFamily.heading,
-        fontSize: 48,
-        letterSpacing: 4,
-    },
-    subtitle: {
-        color: theme.colors.textSecondary,
-        fontFamily: theme.typography.fontFamily.medium,
-        fontSize: 14,
-        letterSpacing: 2,
+    logo: {
+        width: 150,
+        height: 150,
         marginBottom: 24,
     },
     errorText: {
@@ -165,7 +171,7 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '100%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         borderWidth: 1,
         borderColor: theme.colors.border,
         color: theme.colors.text,
@@ -179,7 +185,7 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         borderWidth: 1,
         borderColor: theme.colors.border,
     },
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         borderWidth: 1,
         borderColor: theme.colors.border,
         paddingVertical: 14,

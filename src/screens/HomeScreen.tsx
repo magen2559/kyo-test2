@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useWindowDimensions, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { GlassHeader } from '../components/GlassHeader';
@@ -8,10 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { EventItem } from '../navigation/RootNavigator';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export const HomeScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
+    const { height } = useWindowDimensions();
     const [events, setEvents] = React.useState<EventItem[]>([]);
 
     React.useEffect(() => {
@@ -33,7 +35,7 @@ export const HomeScreen = () => {
                 <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' }} />
             </View>
             <View style={styles.eventDetails}>
-                <Text style={styles.eventDate}>{event.date_label.replace('\n', ' ')}</Text>
+                <Text style={styles.eventDate}>{event.date_label.replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim()}</Text>
                 <Text style={styles.eventTitle}>{event.title}</Text>
                 {event.status !== 'AVAILABLE' && (
                     <View style={[styles.limitedTag, event.status === 'SOLD OUT' && { backgroundColor: '#333' }]}>
@@ -47,23 +49,46 @@ export const HomeScreen = () => {
         </IndustrialCard>
     );
 
+    // Auto-scroll ref
+    const flatListRef = React.useRef<FlatList>(null);
+    const [currentIndex, setCurrentIndex] = React.useState(0);
+
+    React.useEffect(() => {
+        if (events.length === 0) return;
+        const interval = setInterval(() => {
+            let nextIndex = currentIndex + 1;
+            if (nextIndex >= events.length) {
+                nextIndex = 0;
+            }
+            flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+            setCurrentIndex(nextIndex);
+        }, 3000); // Scroll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [currentIndex, events.length]);
+
     return (
         <View style={styles.container}>
-            <GlassHeader title="VIP ACCESS" rightElement={<Ionicons name="person-circle" size={28} color={theme.colors.primary} />} />
+            <GlassHeader showLogo rightElement={<Ionicons name="person-circle" size={28} color={theme.colors.primary} />} />
 
             <ScrollView
                 contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 56 }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero Section */}
-                <View style={styles.heroSection}>
+                <View style={[styles.heroSection, { height: height * 0.65 }]}>
                     <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1548&auto=format&fit=crop' }}
+                        source={require('../../assets/hero-bg-2.jpg')}
                         style={styles.heroImage}
+                        resizeMode="cover"
+                    />
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.gradientOverlay}
                     />
                     <View style={styles.heroOverlay}>
                         <Text style={styles.heroTitle}>ABOUT US</Text>
-                        <Text style={styles.heroSubtitle}>Experience the raw industrial energy of KL's most exclusive underground sanctuary.</Text>
+                        <Text style={styles.heroSubtitle}>Uncover an underground escape within the city as you descend into our party den positioned at the basement of the Mandarin Oriental hotel. Kyo is a pulsating epicentre for those seeking a vibrant and electrifying night out in the heart of Kuala Lumpur.</Text>
                         <View style={{ flexDirection: 'row', gap: 12 }}>
                             <TouchableOpacity
                                 style={[styles.outlineButton, { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
@@ -71,7 +96,10 @@ export const HomeScreen = () => {
                             >
                                 <Text style={[styles.outlineButtonText, { color: '#000' }]}>GET WALK-IN PASS</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.outlineButton}>
+                            <TouchableOpacity
+                                style={styles.outlineButton}
+                                onPress={() => navigation.navigate('About' as never)}
+                            >
                                 <Text style={styles.outlineButtonText}>VIEW MORE</Text>
                             </TouchableOpacity>
                         </View>
@@ -79,35 +107,46 @@ export const HomeScreen = () => {
                 </View>
 
                 {/* Upcoming Events Carousel */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>UPCOMING EVENTS</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
-                        {events.length > 0 ? (
-                            events.map(event => renderEventCard(event))
-                        ) : (
-                            <Text style={{ color: theme.colors.textSecondary, marginLeft: 20 }}>Loading events...</Text>
-                        )}
-                    </ScrollView>
+                <View style={[styles.sectionContainer, { marginBottom: 40 }]}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>UPCOMING EVENTS</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Lineup' as never)}>
+                            <Text style={styles.seeMoreText}>SEE MORE</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {events.length > 0 ? (
+                        <FlatList
+                            ref={flatListRef}
+                            data={events}
+                            renderItem={({ item }) => renderEventCard(item)}
+                            keyExtractor={(item) => item.id}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.carouselContainer}
+                            snapToInterval={256} // card width (240) + margin (16)
+                            decelerationRate="fast"
+                        />
+                    ) : (
+                        <Text style={{ color: theme.colors.textSecondary, marginLeft: 20 }}>Loading events...</Text>
+                    )}
                 </View>
 
-                {/* Location Map Preview */}
-                <View style={styles.sectionContainer}>
-                    <View style={styles.locationHeader}>
-                        <View>
-                            <Text style={styles.locationTitle}>MANDARIN ORIENTAL</Text>
-                            <Text style={styles.locationSubtitle}>Kuala Lumpur City Centre</Text>
-                        </View>
-                        <Ionicons name="location" size={24} color={theme.colors.primary} />
+                {/* Gallery Section Placeholder */}
+                <View style={[styles.sectionContainer, { marginBottom: 40 }]}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>GALLERY</Text>
+                        <TouchableOpacity>
+                            <Text style={styles.seeMoreText}>SEE ALL</Text>
+                        </TouchableOpacity>
                     </View>
-                    <IndustrialCard style={styles.mapPreviewCard}>
-                        {/* Placeholder for actual map image or generic dark box */}
-                        <View style={styles.mapDarkOverlay}>
-                            <View style={styles.mapPinContainer}>
-                                <Ionicons name="ellipse" size={16} color={theme.colors.primary} />
-                                <View style={styles.mapPinPulse} />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
+                        {[1, 2, 3].map((item) => (
+                            <View key={item} style={styles.galleryPlaceholder}>
+                                <Ionicons name="image-outline" size={40} color={theme.colors.textSecondary} />
+                                <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>Kyo Image {item}</Text>
                             </View>
-                        </View>
-                    </IndustrialCard>
+                        ))}
+                    </ScrollView>
                 </View>
 
                 <View style={{ height: 40 }} />
@@ -126,57 +165,74 @@ const styles = StyleSheet.create({
     },
     heroSection: {
         width: '100%',
-        height: 400,
         position: 'relative',
     },
     heroImage: {
+        ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        opacity: 0.6,
+    },
+    gradientOverlay: {
+        ...StyleSheet.absoluteFillObject,
     },
     heroOverlay: {
         position: 'absolute',
-        bottom: 40,
+        bottom: 32,
         left: 20,
         right: 20,
     },
     heroTitle: {
         color: theme.colors.text,
         fontFamily: theme.typography.fontFamily.bold,
-        fontSize: 32,
+        fontSize: 24,
         marginBottom: 8,
-        letterSpacing: 1,
+        letterSpacing: 2,
     },
     heroSubtitle: {
         color: theme.colors.textSecondary,
         fontFamily: theme.typography.fontFamily.regular,
-        fontSize: 14,
-        marginBottom: 20,
-        lineHeight: 20,
+        fontSize: 13,
+        marginBottom: 24,
+        lineHeight: 18,
+        opacity: 0.9,
     },
     outlineButton: {
         borderWidth: 1,
         borderColor: theme.colors.primary,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
+        paddingVertical: 14,
+        paddingHorizontal: 28,
         alignSelf: 'flex-start',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     outlineButtonText: {
         color: theme.colors.primary,
         fontFamily: theme.typography.fontFamily.bold,
         fontSize: 12,
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
     sectionContainer: {
         marginTop: 40,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 16,
     },
     sectionTitle: {
         color: theme.colors.primary,
         fontFamily: theme.typography.fontFamily.bold,
         fontSize: 12,
         letterSpacing: 2,
-        marginLeft: 20,
-        marginBottom: 16,
+    },
+    seeMoreText: {
+        color: theme.colors.textSecondary,
+        fontFamily: theme.typography.fontFamily.medium,
+        fontSize: 12,
+        letterSpacing: 1,
     },
     carouselContainer: {
         paddingHorizontal: 20,
@@ -231,46 +287,15 @@ const styles = StyleSheet.create({
         fontFamily: theme.typography.fontFamily.bold,
         fontSize: 12,
     },
-    locationHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 16,
-    },
-    locationTitle: {
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.bold,
-        fontSize: 16,
-    },
-    locationSubtitle: {
-        color: theme.colors.textSecondary,
-        fontFamily: theme.typography.fontFamily.regular,
-        fontSize: 12,
-        marginTop: 4,
-    },
-    mapPreviewCard: {
-        marginHorizontal: 20,
-        height: 150,
-        backgroundColor: '#111',
-    },
-    mapDarkOverlay: {
-        flex: 1,
+    galleryPlaceholder: {
+        width: 160,
+        height: 160,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        marginRight: 16,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    mapPinContainer: {
-        position: 'relative',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    mapPinPulse: {
-        position: 'absolute',
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: theme.colors.primary,
-        opacity: 0.2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
 });
