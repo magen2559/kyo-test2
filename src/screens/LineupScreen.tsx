@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase';
 
 type LineupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
-const FILTERS = ['Events'];
+
 
 const INTERNATIONAL_ACTS = [
     { id: '1', name: 'Big Shaq', image: require('../../assets/images/international_acts/act_1.jpeg') },
@@ -24,6 +24,20 @@ const INTERNATIONAL_ACTS = [
     { id: '8', name: 'Act 8', image: require('../../assets/images/international_acts/act_8.jpeg') },
     { id: '9', name: 'Act 9', image: require('../../assets/images/international_acts/act_9.jpeg') },
     { id: '10', name: 'Act 10', image: require('../../assets/images/international_acts/act_10.jpeg') },
+];
+
+type StaticEventInfo = { id: string; name: string; date: string; image: any; };
+const STATIC_EVENTS: StaticEventInfo[] = [
+    { id: '1', name: 'Hotel Amour presents Baby J', date: '13.02.25', image: require('../../assets/images/events/event_1.jpeg') },
+    { id: '2', name: 'TWP - HUGEL', date: '23.01.25', image: require('../../assets/images/events/event_2.jpeg') },
+    { id: '3', name: 'COSMIC', date: '24.12.24 - 31.12.24', image: require('../../assets/images/events/event_3.jpeg') },
+    { id: '4', name: 'COSMIC CHRISTMAS', date: '24.12.24 - 25.12.24', image: require('../../assets/images/events/event_4.jpeg') },
+    { id: '5', name: 'COUP. ELEXSANDOM', date: '19.12.24', image: require('../../assets/images/events/event_5.jpeg') },
+    { id: '6', name: 'AHMED ROMEL', date: '5.12.24', image: require('../../assets/images/events/event_6.jpeg') },
+    { id: '7', name: 'YUNG SINGH', date: '28.11.24', image: require('../../assets/images/events/event_7.jpeg') },
+    { id: '8', name: 'THE TEMPLE - KIM SHE B2B AYLIN', date: '21.11.24', image: require('../../assets/images/events/event_8.jpeg') },
+    { id: '9', name: 'KING PROMISE LIVE', date: '17.10.24', image: require('../../assets/images/events/event_9.jpeg') },
+    { id: '10', name: 'MAJOR LEAGUE DJZ LIVE', date: '26.09.24', image: require('../../assets/images/events/event_10.jpeg') },
 ];
 
 export const LineupScreen = () => {
@@ -131,29 +145,6 @@ export const LineupScreen = () => {
                             onChangeText={setSearchQuery}
                         />
                     </View>
-                    <TouchableOpacity style={styles.calendarButton}>
-                        <Ionicons name="calendar" size={20} color={theme.colors.primary} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.filterContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                        {FILTERS.map((filter) => (
-                            <TouchableOpacity
-                                key={filter}
-                                style={[
-                                    styles.filterChip,
-                                    activeFilter === filter && styles.filterChipActive
-                                ]}
-                                onPress={() => setActiveFilter(filter)}
-                            >
-                                <Text style={[
-                                    styles.filterText,
-                                    activeFilter === filter && styles.filterTextActive
-                                ]}>{filter}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
                 </View>
             </View>
 
@@ -181,13 +172,29 @@ export const LineupScreen = () => {
                     </View>
                 )}
 
-                {filteredEvents.map(renderEvent)}
-                <View style={{ height: 100 }} /> {/* Padding for FAB */}
-            </ScrollView>
+                {activeFilter === 'Events' && (
+                    <View style={styles.eventsHeaderSection}>
+                        <View style={styles.eventsDivider} />
+                        <Text style={styles.eventsHeader}>EVENTS</Text>
+                    </View>
+                )}
 
-            <TouchableOpacity style={[styles.fab, { bottom: 20 }]} activeOpacity={0.8}>
-                <Ionicons name="add" size={32} color="#000" />
-            </TouchableOpacity>
+                {activeFilter === 'Events' && STATIC_EVENTS.map((event) => (
+                    <View key={event.id} style={styles.staticEventCard}>
+                        <Image source={event.image} style={styles.staticEventImage} />
+                        <Text style={styles.staticEventName} numberOfLines={2}>{event.name}</Text>
+                        <View style={styles.staticEventDateRow}>
+                            <Ionicons name="calendar-outline" size={14} color="#fff" />
+                            <Text style={styles.staticEventDate}>{event.date}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.staticEventButton}>
+                            <Text style={styles.staticEventButtonText}>VIEW MORE</Text>
+                        </TouchableOpacity>
+                    </View>
+                ))}
+
+                {filteredEvents.map(renderEvent)}
+            </ScrollView>
         </View>
     );
 };
@@ -198,8 +205,8 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background,
     },
     controlsContainer: {
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
+        borderBottomWidth: 2,
+        borderBottomColor: '#fff',
         paddingBottom: 16,
     },
     searchRow: {
@@ -213,8 +220,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 2,
+        borderColor: '#fff',
         paddingHorizontal: 12,
         borderRadius: 4,
     },
@@ -225,15 +232,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginLeft: 8,
         paddingVertical: 12,
-    },
-    calendarButton: {
-        width: 48,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: 4,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     filterContainer: {
         height: 32,
@@ -339,21 +337,6 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         letterSpacing: 0.5,
     },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
     internationalActsSection: {
         marginBottom: 24,
         marginTop: 8,
@@ -394,5 +377,69 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginTop: 8,
         textAlign: 'left',
+    },
+    eventsHeaderSection: {
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginBottom: 8,
+    },
+    eventsDivider: {
+        width: 100,
+        height: 2,
+        backgroundColor: '#fff',
+        marginBottom: 12,
+    },
+    eventsHeader: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 32,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+    },
+    staticEventCard: {
+        width: '100%',
+        marginBottom: 32,
+    },
+    staticEventImage: {
+        width: '100%',
+        height: 400,
+        backgroundColor: '#111',
+        resizeMode: 'contain',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    staticEventName: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 18,
+        marginTop: 16,
+        textAlign: 'left',
+        textTransform: 'uppercase',
+    },
+    staticEventDateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        gap: 8,
+    },
+    staticEventDate: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.monospace,
+        fontSize: 14,
+    },
+    staticEventButton: {
+        marginTop: 20,
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderWidth: 1,
+        borderColor: theme.colors.primary, // Gold colored border
+        borderRadius: 2,
+        alignSelf: 'flex-start',
+    },
+    staticEventButtonText: {
+        color: theme.colors.primary,
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 12,
+        letterSpacing: 1,
     },
 });
