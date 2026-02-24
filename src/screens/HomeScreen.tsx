@@ -9,12 +9,28 @@ import { supabase } from '../lib/supabase';
 import { EventItem } from '../navigation/RootNavigator';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useVideoPlayer, VideoView } from 'expo-video';
+
+const GALLERY_IMAGES = [
+    { id: '1', source: require('../../assets/images/gallery/img-gallery-03.jpg'), title: 'Kyo Image 1' },
+    { id: '2', source: require('../../assets/images/gallery/kyo-img-15.jpg'), title: 'Kyo Image 2' },
+    { id: '3', source: require('../../assets/images/gallery/kyo-img-4.jpg'), title: 'Kyo Image 3' },
+    { id: '4', source: require('../../assets/images/gallery/kyo-img-5.jpg'), title: 'Kyo Image 4' },
+    { id: '5', source: require('../../assets/images/gallery/kyo-img-7.jpg'), title: 'Kyo Image 5' },
+];
 
 export const HomeScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const { height } = useWindowDimensions();
     const [events, setEvents] = React.useState<EventItem[]>([]);
+
+    const videoSource = require('../../assets/videos/kyo_hero_video.mp4');
+    const player = useVideoPlayer(videoSource, player => {
+        player.loop = true;
+        player.muted = false; // Turned sound on per user request
+        player.play();
+    });
 
     React.useEffect(() => {
         const fetchTopEvents = async () => {
@@ -76,20 +92,28 @@ export const HomeScreen = () => {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero Section */}
-                <View style={[styles.heroSection, { height: height * 0.65 }]}>
-                    <Image
-                        source={require('../../assets/hero-bg-2.jpg')}
+                <View style={[styles.heroSection, { height: height * 0.70 }]}>
+                    <VideoView
                         style={styles.heroImage}
-                        resizeMode="cover"
+                        player={player}
+                        contentFit="cover"
+                        nativeControls={false}
                     />
                     <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        colors={['transparent', 'rgba(0,0,0,1)']}
                         style={styles.gradientOverlay}
                     />
-                    <View style={styles.heroOverlay}>
-                        <Text style={styles.heroTitle}>ABOUT US</Text>
-                        <Text style={styles.heroSubtitle}>Uncover an underground escape within the city as you descend into our party den positioned at the basement of the Mandarin Oriental hotel. Kyo is a pulsating epicentre for those seeking a vibrant and electrifying night out in the heart of Kuala Lumpur.</Text>
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                </View>
+
+                {/* About Us & Feel The Void Info Sections */}
+                <View style={styles.infoContainer}>
+                    <View style={styles.infoSection}>
+                        <View style={styles.infoTitleLine} />
+                        <Text style={styles.infoTitle}>ABOUT US</Text>
+                        <Text style={styles.infoText}>
+                            Uncover an underground escape within the city as you descend into our party den positioned at the basement of the Mandarin Oriental hotel. Kyo is a pulsating epicentre for those seeking a vibrant and electrifying night out in the heart of Kuala Lumpur. Music enthusiasts and party aficionados alike gravitate toward Kyo for its unrivalled fusion of dance to hip-hop. It's a melting pot where diverse musical tastes converge, ensuring that there's something for everyone.
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
                             <TouchableOpacity
                                 style={[styles.outlineButton, { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
                                 onPress={() => navigation.navigate('WalkIn' as never)}
@@ -103,6 +127,14 @@ export const HomeScreen = () => {
                                 <Text style={styles.outlineButtonText}>VIEW MORE</Text>
                             </TouchableOpacity>
                         </View>
+                    </View>
+
+                    <View style={styles.infoSection}>
+                        <View style={styles.infoTitleLine} />
+                        <Text style={styles.infoTitle}>FEEL THE VOID</Text>
+                        <Text style={styles.infoText}>
+                            Kyo is powered by Void Acoustics Tri Motion Loudspeakers, a state-of-the-art sound system with music pulsating through your soul. With that, Kyo offers an immersive sonic experience that sets the stage for unforgettable nights in the city. Void emerged as a major supplier to Ibiza, the clubbing capital of the world with the legendary DC 10, Bora Bora and Sands installing Void systems. Delivering power through the systems, Kyo is guaranteed to move people through unforgettable, immersive sound.
+                        </Text>
                     </View>
                 </View>
 
@@ -140,10 +172,13 @@ export const HomeScreen = () => {
                         </TouchableOpacity>
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
-                        {[1, 2, 3].map((item) => (
-                            <View key={item} style={styles.galleryPlaceholder}>
-                                <Ionicons name="image-outline" size={40} color={theme.colors.textSecondary} />
-                                <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>Kyo Image {item}</Text>
+                        {GALLERY_IMAGES.map((item) => (
+                            <View key={item.id} style={styles.galleryPlaceholder}>
+                                <Image source={item.source} style={styles.galleryImage} />
+                                <View style={styles.galleryOverlay}>
+                                    <Ionicons name="image-outline" size={24} color={'rgba(255,255,255,0.8)'} />
+                                    <Text style={{ color: 'rgba(255,255,255,0.8)', marginTop: 4, fontSize: 10 }}>{item.title}</Text>
+                                </View>
                             </View>
                         ))}
                     </ScrollView>
@@ -175,26 +210,34 @@ const styles = StyleSheet.create({
     gradientOverlay: {
         ...StyleSheet.absoluteFillObject,
     },
-    heroOverlay: {
-        position: 'absolute',
-        bottom: 32,
-        left: 20,
-        right: 20,
+    infoContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 24,
+        paddingBottom: 24,
+        gap: 40,
     },
-    heroTitle: {
-        color: theme.colors.text,
+    infoSection: {
+        width: '100%',
+    },
+    infoTitleLine: {
+        width: 120,
+        height: 3,
+        backgroundColor: '#fff',
+        marginBottom: 16,
+    },
+    infoTitle: {
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.bold,
-        fontSize: 24,
-        marginBottom: 8,
-        letterSpacing: 2,
+        fontSize: 28,
+        letterSpacing: 1,
+        marginBottom: 12,
+        textTransform: 'uppercase',
     },
-    heroSubtitle: {
-        color: theme.colors.textSecondary,
+    infoText: {
+        color: 'rgba(255, 255, 255, 0.9)',
         fontFamily: theme.typography.fontFamily.regular,
         fontSize: 13,
-        marginBottom: 24,
-        lineHeight: 18,
-        opacity: 0.9,
+        lineHeight: 20,
     },
     outlineButton: {
         borderWidth: 1,
@@ -293,9 +336,19 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         marginRight: 16,
         borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
+        overflow: 'hidden',
         borderWidth: 1,
         borderColor: theme.colors.border,
+    },
+    galleryImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    galleryOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

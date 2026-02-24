@@ -177,7 +177,7 @@ export const MapScreen = () => {
         <>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>RESERVE A TABLE</Text>
-                <Text style={styles.headerSubtitle}>Select a table and choose your VIP experience</Text>
+                <Text style={styles.headerSubtitle}>Be the center of the energy from the best seats in the house</Text>
             </View>
             <View style={styles.mapContainer}>
                 <Image
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
         borderBottomColor: theme.colors.border,
     },
     headerTitle: {
-        color: theme.colors.primary,
+        color: '#FFF',
         fontFamily: theme.typography.fontFamily.heading,
         fontSize: 28,
         letterSpacing: 2,
@@ -295,11 +295,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        padding: 16,
+        backgroundColor: '#111',
+        padding: 20,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: 'rgba(212, 175, 55, 0.4)', // Faded Gold border
     },
     categoryHeaderExpanded: {
         borderBottomLeftRadius: 0,
@@ -317,30 +317,31 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     categoryTitle: {
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.heading,
-        fontSize: 18,
-        letterSpacing: 1,
+        color: '#FFF',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 20,
+        letterSpacing: 2,
     },
     categorySubTitle: {
-        color: theme.colors.textSecondary,
+        color: 'rgba(255, 255, 255, 0.6)',
         fontFamily: theme.typography.fontFamily.monospace,
         fontSize: 10,
-        marginTop: 2,
+        marginTop: 4,
+        letterSpacing: 1,
     },
     expandIcon: {
-        color: theme.colors.primary,
+        color: '#D4AF37', // Gold + icon
         fontSize: 24,
         fontFamily: theme.typography.fontFamily.regular,
     },
     tablesGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        backgroundColor: 'rgba(10, 10, 10, 0.5)',
+        backgroundColor: '#111',
         padding: 16,
         borderWidth: 1,
         borderTopWidth: 0,
-        borderColor: theme.colors.border,
+        borderColor: 'rgba(212, 175, 55, 0.4)',
         borderBottomLeftRadius: 8,
         borderBottomRightRadius: 8,
         gap: 12,

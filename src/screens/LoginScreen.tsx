@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Image, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../theme';
-import { GlassmorphismView } from '../components/GlassmorphismView';
-import { GoldButton } from '../components/GoldButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { LinearGradient } from 'expo-linear-gradient';
 
 type AuthScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Auth'>;
 
 export const LoginScreen = () => {
-    const { signIn } = useAuth();
+    const { signIn, signInWithApple, signInWithGoogle } = useAuth();
     const navigation = useNavigation<AuthScreenNavigationProp>();
 
     const [identifier, setIdentifier] = useState('');
@@ -34,22 +31,17 @@ export const LoginScreen = () => {
     };
 
     return (
-        <ImageBackground
-            source={require('../../assets/login-bg-v2.png')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-        >
-            <LinearGradient
-                colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.95)']}
-                style={StyleSheet.absoluteFillObject}
-            />
+        <SafeAreaView style={styles.mainContainer}>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    <GlassmorphismView style={styles.card}>
-                        <Image source={require('../../assets/kyo-logo.png')} style={styles.logo} />
+                    <View style={styles.card}>
+                        <View style={styles.headerContainer}>
+                            <Text style={styles.headerTitle}>KYŌ HAS</Text>
+                            <Text style={styles.headerTitle}>RETURNED</Text>
+                        </View>
 
                         {errorMsg ? <Text style={styles.errorText}>{errorMsg.toUpperCase()}</Text> : null}
 
@@ -57,7 +49,7 @@ export const LoginScreen = () => {
                             <TextInput
                                 style={styles.input}
                                 placeholder="EMAIL OR PHONE"
-                                placeholderTextColor={theme.colors.textSecondary}
+                                placeholderTextColor="#fff"
                                 value={identifier}
                                 onChangeText={setIdentifier}
                                 autoCapitalize="none"
@@ -67,7 +59,7 @@ export const LoginScreen = () => {
                                 <TextInput
                                     style={styles.passwordInput}
                                     placeholder="PASSWORD"
-                                    placeholderTextColor={theme.colors.textSecondary}
+                                    placeholderTextColor="#fff"
                                     secureTextEntry={!showPassword}
                                     value={password}
                                     onChangeText={setPassword}
@@ -79,7 +71,7 @@ export const LoginScreen = () => {
                                     <Ionicons
                                         name={showPassword ? "eye-off-outline" : "eye-outline"}
                                         size={20}
-                                        color={theme.colors.textSecondary}
+                                        color="#fff"
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -89,12 +81,13 @@ export const LoginScreen = () => {
                             <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
                         </TouchableOpacity>
 
-                        <GoldButton
-                            title={isLoading ? "AUTHENTICATING..." : "LOGIN"}
+                        <TouchableOpacity
+                            style={[styles.primaryButton, (!identifier || !password || isLoading) && styles.buttonDisabled]}
                             onPress={handleLogin}
                             disabled={!identifier || !password || isLoading}
-                            style={[styles.loginButton, (!identifier || !password || isLoading) && styles.buttonDisabled]}
-                        />
+                        >
+                            <Text style={styles.primaryButtonText}>{isLoading ? "AUTHENTICATING..." : "LOGIN"}</Text>
+                        </TouchableOpacity>
 
                         <View style={styles.dividerContainer}>
                             <View style={styles.divider} />
@@ -102,13 +95,31 @@ export const LoginScreen = () => {
                             <View style={styles.divider} />
                         </View>
 
-                        <TouchableOpacity style={styles.socialButton}>
-                            <Ionicons name="logo-apple" size={20} color={theme.colors.text} />
+                        <TouchableOpacity
+                            style={[styles.socialButton, isLoading && styles.buttonDisabled]}
+                            onPress={async () => {
+                                setIsLoading(true);
+                                const { error } = await signInWithApple();
+                                setIsLoading(false);
+                                if (error) setErrorMsg(error.message);
+                            }}
+                            disabled={isLoading}
+                        >
+                            <Ionicons name="logo-apple" size={20} color="#fff" />
                             <Text style={styles.socialButtonText}>CONTINUE WITH APPLE</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.socialButton}>
-                            <Ionicons name="logo-google" size={20} color={theme.colors.text} />
+                        <TouchableOpacity
+                            style={[styles.socialButton, isLoading && styles.buttonDisabled]}
+                            onPress={async () => {
+                                setIsLoading(true);
+                                const { error } = await signInWithGoogle();
+                                setIsLoading(false);
+                                if (error) setErrorMsg(error.message);
+                            }}
+                            disabled={isLoading}
+                        >
+                            <Ionicons name="logo-google" size={20} color="#fff" />
                             <Text style={styles.socialButtonText}>CONTINUE WITH GOOGLE</Text>
                         </TouchableOpacity>
 
@@ -118,7 +129,7 @@ export const LoginScreen = () => {
                         >
                             <Text style={styles.signUpText}>DON'T HAVE AN ACCOUNT? <Text style={styles.signUpLink}>SIGN UP</Text></Text>
                         </TouchableOpacity>
-                    </GlassmorphismView>
+                    </View>
 
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>
@@ -128,14 +139,14 @@ export const LoginScreen = () => {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </ImageBackground>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    backgroundImage: {
+    mainContainer: {
         flex: 1,
-        width: '100%',
+        backgroundColor: '#000',
     },
     container: {
         flex: 1,
@@ -146,15 +157,21 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     card: {
+        width: '100%',
         alignItems: 'center',
-        paddingVertical: 48,
-        paddingHorizontal: 24,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        paddingVertical: 24,
     },
-    logo: {
-        width: 150,
-        height: 150,
-        marginBottom: 24,
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    headerTitle: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 42,
+        letterSpacing: 2,
+        lineHeight: 48,
+        textAlign: 'center',
     },
     errorText: {
         color: '#FF3B30',
@@ -171,11 +188,11 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: '#000',
         borderWidth: 1,
-        borderColor: theme.colors.border,
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.monospace,
+        borderColor: '#fff',
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.medium,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 14,
@@ -185,14 +202,14 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: '#000',
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: '#fff',
     },
     passwordInput: {
         flex: 1,
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.monospace,
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.medium,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 14,
@@ -206,14 +223,24 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     forgotPasswordText: {
-        color: theme.colors.textSecondary,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.medium,
         fontSize: 12,
-        letterSpacing: 1,
+        letterSpacing: 0.5,
     },
-    loginButton: {
+    primaryButton: {
         width: '100%',
+        backgroundColor: '#fff',
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginBottom: 32,
+    },
+    primaryButtonText: {
+        color: '#000',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 16,
+        letterSpacing: 1,
     },
     buttonDisabled: {
         opacity: 0.5,
@@ -227,11 +254,11 @@ const styles = StyleSheet.create({
     divider: {
         flex: 1,
         height: 1,
-        backgroundColor: theme.colors.border,
+        backgroundColor: '#fff',
     },
     dividerText: {
-        color: theme.colors.textSecondary,
-        fontFamily: theme.typography.fontFamily.monospace,
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.medium,
         paddingHorizontal: 16,
         fontSize: 12,
         letterSpacing: 1,
@@ -241,30 +268,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: '#000',
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: '#fff',
         paddingVertical: 14,
         marginBottom: 16,
         gap: 12,
     },
     socialButtonText: {
-        color: theme.colors.text,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.bold,
         fontSize: 12,
         letterSpacing: 1,
     },
     signUpContainer: {
         marginTop: 16,
+        alignItems: 'center',
     },
     signUpText: {
-        color: theme.colors.textSecondary,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.medium,
         fontSize: 12,
         letterSpacing: 1,
     },
     signUpLink: {
-        color: theme.colors.primary,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.bold,
     },
     footer: {
@@ -272,7 +300,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerText: {
-        color: theme.colors.textSecondary,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.medium,
         fontSize: 10,
         textAlign: 'center',
@@ -280,7 +308,7 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
     footerLink: {
-        color: theme.colors.text,
+        color: '#fff',
         textDecorationLine: 'underline',
     }
 });

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, SafeAreaView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../theme';
-import { GlassmorphismView } from '../components/GlassmorphismView';
-import { GoldButton } from '../components/GoldButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 export const SignUpScreen = () => {
-    const { signUp } = useAuth();
+    const { signUp, signInWithApple, signInWithGoogle } = useAuth();
     const navigation = useNavigation();
 
     const [name, setName] = useState('');
@@ -39,141 +37,191 @@ export const SignUpScreen = () => {
     const isFormValid = name && identifier && password && confirmPassword === password && agreeToTerms;
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-                </TouchableOpacity>
-
-                <GlassmorphismView neonBorder style={styles.card}>
-                    <Text style={styles.heading}>JOIN KYO</Text>
-                    <Text style={styles.subtitle}>VIP MEMBERSHIP</Text>
-
-                    {errorMsg ? <Text style={styles.errorText}>{errorMsg.toUpperCase()}</Text> : null}
-                    {successMsg ? <Text style={[styles.errorText, { color: theme.colors.primary }]}>{successMsg.toUpperCase()}</Text> : null}
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="FULL NAME"
-                            placeholderTextColor={theme.colors.textSecondary}
-                            value={name}
-                            onChangeText={setName}
-                        />
-
-                        <TextInput
-                            style={styles.input}
-                            placeholder="EMAIL OR PHONE"
-                            placeholderTextColor={theme.colors.textSecondary}
-                            value={identifier}
-                            onChangeText={setIdentifier}
-                            autoCapitalize="none"
-                        />
-
-                        <View style={styles.passwordContainer}>
-                            <TextInput
-                                style={styles.passwordInput}
-                                placeholder="PASSWORD"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                secureTextEntry={!showPassword}
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                            <TouchableOpacity
-                                style={styles.eyeIcon}
-                                onPress={() => setShowPassword(!showPassword)}
-                            >
-                                <Ionicons
-                                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                                    size={20}
-                                    color={theme.colors.textSecondary}
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.passwordContainer}>
-                            <TextInput
-                                style={styles.passwordInput}
-                                placeholder="CONFIRM PASSWORD"
-                                placeholderTextColor={theme.colors.textSecondary}
-                                secureTextEntry={!showPassword}
-                                value={confirmPassword}
-                                onChangeText={setConfirmPassword}
-                            />
-                        </View>
-                    </View>
-
+        <SafeAreaView style={styles.mainContainer}>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <TouchableOpacity
-                        style={styles.checkboxContainer}
-                        onPress={() => setAgreeToTerms(!agreeToTerms)}
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
                     >
-                        <View style={[styles.checkbox, agreeToTerms && styles.checkboxActive]}>
-                            {agreeToTerms && <Ionicons name="checkmark" size={14} color={theme.colors.background} />}
-                        </View>
-                        <Text style={styles.checkboxText}>
-                            I AGREE TO THE <Text style={styles.linkText}>TERMS OF SERVICE</Text> & <Text style={styles.linkText}>PRIVACY POLICY</Text>
-                        </Text>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
 
-                    <GoldButton
-                        title={isLoading ? "REGISTERING..." : "CREATE ACCOUNT"}
-                        onPress={handleSignUp}
-                        disabled={!isFormValid || isLoading}
-                        style={[styles.signUpButton, (!isFormValid || isLoading) && styles.buttonDisabled]}
-                    />
+                    <View style={styles.card}>
+                        <View style={styles.headerContainer}>
+                            <Text style={styles.headerTitle}>KYŌ HAS</Text>
+                            <Text style={styles.headerTitle}>RETURNED</Text>
+                            <Text style={styles.subtitle}>VIP MEMBERSHIP</Text>
+                        </View>
 
-                </GlassmorphismView>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                        {errorMsg ? <Text style={styles.errorText}>{errorMsg.toUpperCase()}</Text> : null}
+                        {successMsg ? <Text style={[styles.errorText, { color: '#fff' }]}>{successMsg.toUpperCase()}</Text> : null}
+
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="FULL NAME"
+                                placeholderTextColor="#fff"
+                                value={name}
+                                onChangeText={setName}
+                            />
+
+                            <TextInput
+                                style={styles.input}
+                                placeholder="EMAIL OR PHONE"
+                                placeholderTextColor="#fff"
+                                value={identifier}
+                                onChangeText={setIdentifier}
+                                autoCapitalize="none"
+                            />
+
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="PASSWORD"
+                                    placeholderTextColor="#fff"
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                                <TouchableOpacity
+                                    style={styles.eyeIcon}
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                        size={20}
+                                        color="#fff"
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.passwordContainer}>
+                                <TextInput
+                                    style={styles.passwordInput}
+                                    placeholder="CONFIRM PASSWORD"
+                                    placeholderTextColor="#fff"
+                                    secureTextEntry={!showPassword}
+                                    value={confirmPassword}
+                                    onChangeText={setConfirmPassword}
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={() => setAgreeToTerms(!agreeToTerms)}
+                        >
+                            <View style={[styles.checkbox, agreeToTerms && styles.checkboxActive]}>
+                                {agreeToTerms && <Ionicons name="checkmark" size={14} color="#000" />}
+                            </View>
+                            <Text style={styles.checkboxText}>
+                                I agree to the <Text style={styles.fontBold}>TERMS OF SERVICE &</Text>{'\n'}
+                                <Text style={styles.fontBold}>PRIVACY POLICY</Text>
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.primaryButton, (!isFormValid || isLoading) && styles.buttonDisabled]}
+                            onPress={handleSignUp}
+                            disabled={!isFormValid || isLoading}
+                        >
+                            <Text style={styles.primaryButtonText}>{isLoading ? "REGISTERING..." : "CREATE ACCOUNT"}</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.dividerContainer}>
+                            <View style={styles.divider} />
+                            <Text style={styles.dividerText}>OR</Text>
+                            <View style={styles.divider} />
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.socialButton, isLoading && styles.buttonDisabled]}
+                            onPress={async () => {
+                                setIsLoading(true);
+                                const { error } = await signInWithApple();
+                                setIsLoading(false);
+                                if (error) setErrorMsg(error.message);
+                            }}
+                            disabled={isLoading}
+                        >
+                            <Ionicons name="logo-apple" size={20} color="#fff" />
+                            <Text style={styles.socialButtonText}>CONTINUE WITH APPLE</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.socialButton, isLoading && styles.buttonDisabled]}
+                            onPress={async () => {
+                                setIsLoading(true);
+                                const { error } = await signInWithGoogle();
+                                setIsLoading(false);
+                                if (error) setErrorMsg(error.message);
+                            }}
+                            disabled={isLoading}
+                        >
+                            <Ionicons name="logo-google" size={20} color="#fff" />
+                            <Text style={styles.socialButtonText}>CONTINUE WITH GOOGLE</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+    mainContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
         padding: 24,
-        paddingTop: 60, // Space for back button
+        paddingTop: 60,
     },
     backButton: {
         position: 'absolute',
-        top: 60,
+        top: Platform.OS === 'ios' ? 60 : 40,
         left: 24,
         zIndex: 10,
         padding: 8,
     },
     card: {
+        width: '100%',
         alignItems: 'center',
-        paddingVertical: 48,
-        paddingHorizontal: 24,
+        paddingVertical: 24,
     },
-    heading: {
-        color: theme.colors.primary,
-        fontFamily: theme.typography.fontFamily.heading,
-        fontSize: 36,
-        letterSpacing: 4,
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    headerTitle: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 42,
+        letterSpacing: 2,
+        lineHeight: 48,
+        textAlign: 'center',
     },
     subtitle: {
-        color: theme.colors.textSecondary,
+        color: '#fff',
         fontFamily: theme.typography.fontFamily.medium,
-        fontSize: 12,
-        letterSpacing: 2,
-        marginBottom: 24,
+        fontSize: 14,
+        letterSpacing: 1,
+        marginTop: 12,
+        textTransform: 'uppercase',
     },
     errorText: {
         color: '#FF3B30',
         fontFamily: theme.typography.fontFamily.medium,
-        fontSize: 10,
+        fontSize: 12,
         marginBottom: 24,
         textAlign: 'center',
         letterSpacing: 1,
@@ -185,11 +233,11 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '100%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: '#000',
         borderWidth: 1,
-        borderColor: theme.colors.border,
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.monospace,
+        borderColor: '#fff',
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.medium,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 14,
@@ -199,14 +247,14 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: '#000',
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: '#fff',
     },
     passwordInput: {
         flex: 1,
-        color: theme.colors.text,
-        fontFamily: theme.typography.fontFamily.monospace,
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.medium,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 14,
@@ -224,32 +272,78 @@ const styles = StyleSheet.create({
     checkbox: {
         width: 20,
         height: 20,
+        backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: theme.colors.textSecondary,
+        borderColor: '#fff',
         marginRight: 12,
         alignItems: 'center',
         justifyContent: 'center',
+        borderRadius: 2,
     },
     checkboxActive: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
+        backgroundColor: '#fff',
     },
     checkboxText: {
         flex: 1,
-        color: theme.colors.textSecondary,
-        fontFamily: theme.typography.fontFamily.medium,
-        fontSize: 10,
-        letterSpacing: 0.5,
-        lineHeight: 16,
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.regular,
+        fontSize: 12,
+        lineHeight: 18,
     },
-    linkText: {
-        color: theme.colors.primary,
-        textDecorationLine: 'underline',
+    fontBold: {
+        fontFamily: theme.typography.fontFamily.bold,
     },
-    signUpButton: {
+    primaryButton: {
         width: '100%',
+        backgroundColor: '#fff',
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    primaryButtonText: {
+        color: '#000',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 16,
+        letterSpacing: 1,
     },
     buttonDisabled: {
         opacity: 0.5,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        marginVertical: 24,
+    },
+    divider: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#333',
+    },
+    dividerText: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        paddingHorizontal: 16,
+        fontSize: 12,
+        letterSpacing: 1,
+    },
+    socialButton: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: '#fff',
+        paddingVertical: 14,
+        marginBottom: 16,
+        borderRadius: 2,
+    },
+    socialButtonText: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 14,
+        letterSpacing: 1,
+        marginLeft: 12,
     },
 });

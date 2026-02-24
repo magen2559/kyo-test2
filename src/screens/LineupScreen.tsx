@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, TextInput, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,13 +11,26 @@ import { supabase } from '../lib/supabase';
 
 type LineupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
-const FILTERS = ['ALL SESSIONS', 'TECHNO', 'INDUSTRIAL', 'HOUSE'];
+const FILTERS = ['Events'];
+
+const INTERNATIONAL_ACTS = [
+    { id: '1', name: 'Big Shaq', image: require('../../assets/images/international_acts/act_1.jpeg') },
+    { id: '2', name: 'Jazzy Jeff', image: require('../../assets/images/international_acts/act_2.jpeg') },
+    { id: '3', name: 'Dash Berlin', image: require('../../assets/images/international_acts/act_3.jpeg') },
+    { id: '4', name: 'Kid Ink', image: require('../../assets/images/international_acts/act_4.jpeg') },
+    { id: '5', name: 'Act 5', image: require('../../assets/images/international_acts/act_5.jpeg') },
+    { id: '6', name: 'Act 6', image: require('../../assets/images/international_acts/act_6.jpeg') },
+    { id: '7', name: 'Act 7', image: require('../../assets/images/international_acts/act_7.jpeg') },
+    { id: '8', name: 'Act 8', image: require('../../assets/images/international_acts/act_8.jpeg') },
+    { id: '9', name: 'Act 9', image: require('../../assets/images/international_acts/act_9.jpeg') },
+    { id: '10', name: 'Act 10', image: require('../../assets/images/international_acts/act_10.jpeg') },
+];
 
 export const LineupScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<LineupScreenNavigationProp>();
 
-    const [activeFilter, setActiveFilter] = useState('ALL SESSIONS');
+    const [activeFilter, setActiveFilter] = useState('Events');
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [events, setEvents] = useState<EventItem[]>([]);
@@ -62,7 +75,7 @@ export const LineupScreen = () => {
                         <View style={styles.dateBadge}>
                             <Text style={styles.dateText}>{event.date_label}</Text>
                         </View>
-                        {event.status !== 'AVAILABLE' && (
+                        {event.status !== 'AVAILABLE' && !event.is_past && (
                             <View style={[
                                 styles.statusBadge,
                                 event.status === 'SOLD OUT' && styles.statusBadgeSoldOut
@@ -89,9 +102,18 @@ export const LineupScreen = () => {
         </TouchableOpacity>
     );
 
-    const filteredEvents = events.filter(event =>
-        event.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredEvents = events.filter(event => {
+        const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
+        let matchesFilter = true;
+
+        if (activeFilter === 'Upcoming Events') {
+            matchesFilter = !event.is_past;
+        } else if (activeFilter === 'Events') {
+            matchesFilter = !!event.is_past;
+        }
+
+        return matchesSearch && matchesFilter;
+    });
 
     return (
         <View style={styles.container}>
@@ -142,6 +164,23 @@ export const LineupScreen = () => {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
                 }
             >
+                {activeFilter === 'Events' && (
+                    <View style={styles.internationalActsSection}>
+                        <View style={styles.internationalActsDivider} />
+                        <Text style={styles.internationalActsHeader}>
+                            INTERNATIONAL ACTS THAT TOOK THE STAGE
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.internationalActsScroll}>
+                            {INTERNATIONAL_ACTS.map((act) => (
+                                <View key={act.id} style={styles.internationalActCard}>
+                                    <Image source={act.image} style={styles.internationalActImage} />
+                                    <Text style={styles.internationalActName}>{act.name}</Text>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+
                 {filteredEvents.map(renderEvent)}
                 <View style={{ height: 100 }} /> {/* Padding for FAB */}
             </ScrollView>
@@ -208,22 +247,20 @@ const styles = StyleSheet.create({
     filterChip: {
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: theme.colors.textSecondary,
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
     },
     filterChipActive: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
+        borderBottomColor: theme.colors.primary,
     },
     filterText: {
         color: theme.colors.textSecondary,
         fontFamily: theme.typography.fontFamily.bold,
-        fontSize: 10,
+        fontSize: 12,
         letterSpacing: 1,
     },
     filterTextActive: {
-        color: '#000',
+        color: theme.colors.primary,
     },
     feedContainer: {
         paddingHorizontal: 16,
@@ -316,5 +353,46 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 6,
+    },
+    internationalActsSection: {
+        marginBottom: 24,
+        marginTop: 8,
+    },
+    internationalActsDivider: {
+        width: 100,
+        height: 2,
+        backgroundColor: '#fff',
+        marginBottom: 12,
+    },
+    internationalActsHeader: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 24,
+        textTransform: 'uppercase',
+        marginBottom: 16,
+        lineHeight: 28,
+        letterSpacing: 1,
+    },
+    internationalActsScroll: {
+        gap: 12,
+        paddingRight: 16,
+    },
+    internationalActCard: {
+        width: 200,
+        alignItems: 'flex-start',
+    },
+    internationalActImage: {
+        width: 200,
+        height: 160,
+        backgroundColor: '#222',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    internationalActName: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.regular,
+        fontSize: 14,
+        marginTop: 8,
+        textAlign: 'left',
     },
 });

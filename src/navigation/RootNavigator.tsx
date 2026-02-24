@@ -28,6 +28,7 @@ export interface EventItem {
     bpm: string;
     image: string;
     status: 'LIMITED' | 'SOLD OUT' | 'AVAILABLE';
+    is_past?: boolean;
 }
 
 export type RootStackParamList = {

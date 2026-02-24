@@ -55,8 +55,6 @@ export const AdminDashboardScreen = () => {
         setIsProcessing(true);
 
         try {
-            // Logic: kyo-walkin-ID-TIMESTAMP-GUESTS
-            // Logic: kyo-BK-ID-USERID
             if (!data.startsWith('kyo-')) {
                 throw new Error('Invalid QR Code Format');
             }
@@ -64,30 +62,45 @@ export const AdminDashboardScreen = () => {
             const parts = data.split('-');
 
             if (data.includes('walkin')) {
-                // Walk-in logic
-                const timestamp = parseInt(parts[3]);
-                const guestCount = parts[4];
+                // Format: kyo-walkin-WI-TIMESTAMP-TIMESTAMP-GUESTS
+                // Parts:
+                // 0: kyo
+                // 1: walkin
+                // 2: WI
+                // 3: 17088... (Booking ID Timestamp)
+                // 4: 17088... (Creation Timestamp for 5 min check)
+                // 5: GUEST_COUNT
+                const bookingTimestampPart = parts[3];
+                const timestamp = parseInt(parts[4]);
+                const guestCount = parts[5];
                 const now = Date.now();
                 const diff = (now - timestamp) / 1000 / 60; // minutes
 
                 if (diff > 5) {
                     Alert.alert('EXPIRED', `This walk-in pass expired ${Math.floor(diff - 5)} minutes ago.`);
-                    setIsProcessing(false);
-                    return;
+                    return; // Don't auto-reset scanned here, wait for manual 'next scan'
                 }
+
+                const bookingId = `WI-${bookingTimestampPart}`;
 
                 Alert.alert(
                     'WALK-IN VERIFIED',
                     `Valid for ${guestCount} pax.\nTimestamp check passed.`,
-                    [{ text: 'CHECK IN', onPress: () => processCheckIn(parts[2]) }]
+                    [{ text: 'CHECK IN', onPress: () => processCheckIn(bookingId) }]
                 );
             } else {
                 // Regular booking logic
-                const bookingIdPart = parts[1] + '-' + parts[2]; // BK-Timestamp
+                // Format: kyo-BK-TIMESTAMP-USERID
+                // Parts:
+                // 0: kyo
+                // 1: BK
+                // 2: TIMESTAMP
+                // 3: USERID
+                const bookingId = `${parts[1]}-${parts[2]}`; // BK-Timestamp
                 Alert.alert(
                     'BOOKING DETECTED',
-                    `ID: ${bookingIdPart}\nVerifying with database...`,
-                    [{ text: 'VERIFY', onPress: () => verifyBooking(bookingIdPart) }]
+                    `ID: ${bookingId}\nVerifying with database...`,
+                    [{ text: 'VERIFY', onPress: () => verifyBooking(bookingId) }]
                 );
             }
         } catch (err: any) {
@@ -98,31 +111,50 @@ export const AdminDashboardScreen = () => {
     };
 
     const verifyBooking = async (bookingId: string) => {
-        // Since our IDs in DB are UUIDs, we should really be encoding the UUID in the QR.
-        // For this demo, let's assume we search by a substring or similar if we use custom IDs.
-        // Optimally, the QR should contain the exact UUID.
-
-        // Let's assume the QR data for regular bookings is formatted as 'kyo-UUID'
-        // If it's the BK-timestamp format we used in CheckoutScreen, we'd need to store that human ID.
-        // For now, let's pull all reservations and find matching QR data.
-
+        setIsProcessing(true);
         const { data, error } = await supabase
             .from('reservations')
             .select('*')
-            .eq('qr_code_data', `kyo-${bookingId}-${supabase.auth.getUser()}`) // This is a bit fragile without exact UUIDs
+            .like('qr_code_data', `%${bookingId}%`) // Match any QR containing this booking ID
             .single();
 
-        // Fallback for demo: just search by qr_code_data containing the ID or being the exact string
-        // In a real app, IDs would be UUIDs and QR would encode them directly.
+        setIsProcessing(false);
 
-        Alert.alert('SYSTEM NOTE', 'Verification logic would query Supabase for UUID match here.');
-        setScanned(false);
+        if (error || !data) {
+            Alert.alert('NOT FOUND', 'Could not find a booking matching this QR code.');
+            return;
+        }
+
+        if (data.status === 'CHECKED_IN') {
+            Alert.alert('ALREADY CHECKED IN', `Booking ${bookingId} was already checked in.`);
+            return;
+        }
+
+        Alert.alert(
+            'BOOKING FOUND',
+            `Guests: ${data.guests}\nType: ${data.type}`,
+            [
+                { text: 'CANCEL', style: 'cancel' },
+                { text: 'CHECK IN', onPress: () => processCheckIn(bookingId) }
+            ]
+        );
     };
 
     const processCheckIn = async (bookingId: string) => {
-        // Mock check-in update
-        Alert.alert('SUCCESS', 'Guest has been checked in.');
-        setScanned(false);
+        setIsProcessing(true);
+        const { error } = await supabase
+            .from('reservations')
+            .update({ status: 'CHECKED_IN' })
+            .like('qr_code_data', `%${bookingId}%`); // Update by matching the booking ID inside the QR text
+
+        setIsProcessing(false);
+
+        if (error) {
+            Alert.alert('ERROR', 'Failed to check in guest. Please try again.');
+        } else {
+            Alert.alert('SUCCESS', 'Guest has been checked in.');
+            fetchGuests(); // Refresh the list
+        }
     };
 
     const renderGuestItem = ({ item }: { item: any }) => (

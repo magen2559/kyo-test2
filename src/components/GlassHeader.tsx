@@ -30,9 +30,8 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, showLogo, onLef
                 ) : (
                     <View style={styles.iconPlaceholder} />
                 )}
-
                 {showLogo ? (
-                    <Image source={require('../../assets/kyo-logo.png')} style={styles.logo} />
+                    <Text style={styles.textLogo}>KYŌ HAS RETURNED</Text>
                 ) : (
                     <Text style={styles.title}>{title?.toUpperCase()}</Text>
                 )}
@@ -79,10 +78,11 @@ const styles = StyleSheet.create({
     iconPlaceholder: {
         width: 40,
     },
-    logo: {
-        height: 32,
-        width: 120,
-        resizeMode: 'contain',
+    textLogo: {
+        color: '#fff',
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 16, // Adjusted slightly to fit the longer text
+        letterSpacing: 2,
     },
     bottomBorder: {
         height: 1,
