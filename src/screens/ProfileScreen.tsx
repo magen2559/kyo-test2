@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,7 +11,7 @@ import { IndustrialCard } from '../components/IndustrialCard';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
-type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const ProfileScreen = () => {
     const insets = useSafeAreaInsets();
@@ -22,17 +22,33 @@ export const ProfileScreen = () => {
     const [bookings, setBookings] = React.useState<any[]>([]);
     const [isAdmin, setIsAdmin] = React.useState(false);
 
-    const fetchBookings = async () => {
-        if (!user) return;
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [profile, setProfile] = React.useState({
+        name: user?.user_metadata?.name || '',
+        phone: '',
+        music_preferences: ''
+    });
 
-        // Fetch is_admin status
-        const { data: profileData } = await supabase
+    const fetchProfile = async () => {
+        if (!user) return;
+        const { data } = await supabase
             .from('user_profiles')
-            .select('is_admin')
+            .select('name, phone, music_preferences, role, is_admin')
             .eq('id', user.id)
             .single();
 
-        if (profileData) setIsAdmin(profileData.is_admin);
+        if (data) {
+            setIsAdmin(data.is_admin || data.role === 'admin' || data.role === 'staff');
+            setProfile({
+                name: data.name || user?.user_metadata?.name || '',
+                phone: data.phone || '',
+                music_preferences: Array.isArray(data.music_preferences) ? data.music_preferences.join(', ') : (data.music_preferences || '')
+            });
+        }
+    };
+
+    const fetchBookings = async () => {
+        if (!user) return;
 
         const { data, error } = await supabase
             .from('reservations')
@@ -48,16 +64,27 @@ export const ProfileScreen = () => {
     };
 
     React.useEffect(() => {
+        fetchProfile();
         fetchBookings();
     }, [user]);
 
     const onRefresh = React.useCallback(async () => {
         setRefreshing(true);
+        await fetchProfile();
         await fetchBookings();
         setRefreshing(false);
     }, [user]);
 
-    const userName = user?.user_metadata?.name || 'GUEST USER';
+    const handleSaveProfile = async () => {
+        setIsEditing(false);
+        if (!user) return;
+        await supabase.from('user_profiles').update({
+            name: profile.name,
+            phone: profile.phone,
+            music_preferences: profile.music_preferences.split(',').map(s => s.trim()).filter(Boolean)
+        }).eq('id', user.id);
+    };
+
     const userEmail = user?.email || 'N/A';
 
     return (
@@ -82,16 +109,63 @@ export const ProfileScreen = () => {
                         <Ionicons name="person" size={40} color={theme.colors.background} />
                     </View>
                     <View style={styles.profileInfo}>
-                        <Text style={styles.nameText}>{userName.toUpperCase()}</Text>
-                        <Text style={styles.emailText}>{userEmail}</Text>
-                        <View style={styles.tierBadge}>
-                            <Text style={styles.tierText}>SILVER TIER</Text>
-                        </View>
+                        {!isEditing ? (
+                            <>
+                                <Text style={styles.nameText}>{(profile.name || 'GUEST USER').toUpperCase()}</Text>
+                                <Text style={styles.emailText}>{userEmail}</Text>
+                                {profile.phone ? <Text style={styles.emailText}>{profile.phone}</Text> : null}
+                                <View style={styles.tierBadge}>
+                                    <Text style={styles.tierText}>SILVER TIER</Text>
+                                </View>
+                            </>
+                        ) : (
+                            <View style={{ width: '100%', gap: 8, marginBottom: 8 }}>
+                                <TextInput
+                                    style={styles.input}
+                                    value={profile.name}
+                                    onChangeText={(t) => setProfile(prev => ({ ...prev, name: t }))}
+                                    placeholder="Name"
+                                    placeholderTextColor="#666"
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    value={profile.phone}
+                                    onChangeText={(t) => setProfile(prev => ({ ...prev, phone: t }))}
+                                    placeholder="Phone"
+                                    placeholderTextColor="#666"
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    value={profile.music_preferences}
+                                    onChangeText={(t) => setProfile(prev => ({ ...prev, music_preferences: t }))}
+                                    placeholder="Music Preferences"
+                                    placeholderTextColor="#666"
+                                />
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            style={styles.editBtn}
+                            onPress={isEditing ? handleSaveProfile : () => setIsEditing(true)}
+                        >
+                            <Text style={styles.editBtnText}>{isEditing ? 'SAVE PROFILE' : 'EDIT PROFILE'}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Booking History */}
                 <Text style={styles.sectionTitle}>MY PASSES & BOOKINGS</Text>
+
+                <TouchableOpacity
+                    style={[styles.settingsLauncher, { marginTop: 0, marginBottom: 16 }]}
+                    onPress={() => navigation.navigate('MyTickets' as any)}
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Ionicons name="ticket-outline" size={24} color={theme.colors.primary} />
+                        <Text style={[styles.settingsLauncherText, { color: theme.colors.primary }]}>VIEW ALL TICKETS & PASSES</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+                </TouchableOpacity>
 
                 {bookings.length === 0 && (
                     <Text style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>No bookings found.</Text>
@@ -118,7 +192,7 @@ export const ProfileScreen = () => {
                             <View style={styles.divider} />
                             <TouchableOpacity
                                 style={styles.receiptBtn}
-                                onPress={() => navigation.navigate('DigitalPass' as never, {
+                                onPress={() => navigation.navigate('DigitalPass', {
                                     bookingId: booking.id.substring(0, 8).toUpperCase(),
                                     qrData: booking.qr_code_data,
                                     type: isWalkIn ? 'WALK-IN ENTRY' : 'VIP TABLE',
@@ -126,7 +200,7 @@ export const ProfileScreen = () => {
                                     date: date,
                                     // Only attach timestamp for walk-ins so the timer runs
                                     timestamp: isWalkIn ? new Date(booking.created_at).getTime() : undefined
-                                } as never)}
+                                })}
                             >
                                 <Text style={styles.receiptText}>VIEW DIGITAL PASS</Text>
                                 <Ionicons name="qr-code-outline" size={14} color={theme.colors.primary} />
@@ -205,11 +279,39 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
+        marginRight: 20,
         borderWidth: 2,
         borderColor: 'rgba(197, 160, 89, 0.3)',
     },
     profileInfo: {
         flex: 1,
+        alignItems: 'flex-start',
+    },
+    input: {
+        width: '100%',
+        height: 40,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        color: '#fff',
+        paddingHorizontal: 12,
+        fontFamily: theme.typography.fontFamily.medium,
+        fontSize: 14,
+        borderRadius: 4,
+    },
+    editBtn: {
+        marginTop: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        borderRadius: 4,
+    },
+    editBtnText: {
+        color: theme.colors.primary,
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 10,
+        letterSpacing: 1,
     },
     nameText: {
         color: theme.colors.text,

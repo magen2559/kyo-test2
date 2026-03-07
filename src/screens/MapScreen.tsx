@@ -7,7 +7,7 @@ import { theme } from '../theme';
 import { GlassmorphismView } from '../components/GlassmorphismView';
 import { GoldButton } from '../components/GoldButton';
 import { DateTimePicker } from '../components/DateTimePicker';
-// import { supabase } from '../lib/supabase'; // Removed Supabase
+import { supabase } from '../lib/supabase';
 
 type MapScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -20,45 +20,47 @@ export interface TableData {
     category: string;
 }
 
-const HARDCODED_TABLES: TableData[] = [
-    // Standing Tables (Yellow) - 6 pax, RM1000
-    ...Array.from({ length: 10 }).map((_, i) => ({
-        id: `ST${i + 1}`, table_number: `ST${i + 1}`, capacity: 6, min_spend: 1000, color: '#FFD700', category: 'STANDING TABLE'
-    })),
-    // A-Section (Red) - 8 pax, RM1500
-    ...Array.from({ length: 7 }).map((_, i) => ({
-        id: `A${i + 1}`, table_number: `A${i + 1}`, capacity: 8, min_spend: 1500, color: '#FF4C4C', category: 'A-SECTION'
-    })),
-    // B1-B7 Section (Purple) - 10 pax, RM3000
-    ...Array.from({ length: 7 }).map((_, i) => ({
-        id: `B${i + 1}`, table_number: `B${i + 1}`, capacity: 10, min_spend: 3000, color: '#8A2BE2', category: 'B1-B7 SECTION'
-    })),
-    // B8-B9 Section (Green) - 10 pax, RM4000
-    ...Array.from({ length: 2 }).map((_, i) => ({
-        id: `B${i + 8}`, table_number: `B${i + 8}`, capacity: 10, min_spend: 4000, color: '#32CD32', category: 'B8-B9 SECTION'
-    })),
-    // C1-C3 Section (Green) - 10 pax, RM4000
-    ...Array.from({ length: 3 }).map((_, i) => ({
-        id: `C${i + 1}`, table_number: `C${i + 1}`, capacity: 10, min_spend: 4000, color: '#32CD32', category: 'C1-C3 SECTION'
-    })),
-    // HS1-HS2 Hot Seat (Green) - 10 pax, RM4000
-    ...Array.from({ length: 2 }).map((_, i) => ({
-        id: `HS${i + 1}`, table_number: `HS${i + 1}`, capacity: 10, min_spend: 4000, color: '#32CD32', category: 'HOT SEAT'
-    })),
-    // DJ1-DJ3 (Sofa) (Orange) - 8 pax, RM6000
-    ...Array.from({ length: 3 }).map((_, i) => ({
-        id: `DJ${i + 1}`, table_number: `DJ${i + 1}`, capacity: 8, min_spend: 6000, color: '#FF8C00', category: 'DJ SOFA'
-    })),
-];
+const CATEGORY_COLORS: Record<string, string> = {
+    'STANDING TABLE': '#FFD700',
+    'A-SECTION': '#FF4C4C',
+    'B1-B7 SECTION': '#8A2BE2',
+    'B8-B9 SECTION': '#32CD32',
+    'C1-C3 SECTION': '#32CD32',
+    'HOT SEAT': '#32CD32',
+    'DJ SOFA': '#FF8C00',
+};
 
 export const MapScreen = () => {
     const navigation = useNavigation<MapScreenNavigationProp>();
     const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
     const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+    const [tables, setTables] = useState<TableData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTables = async () => {
+            const { data, error } = await supabase
+                .from('venue_tables')
+                .select('*')
+                .order('min_spend', { ascending: true })
+                .order('table_number', { ascending: true });
+
+            if (data) {
+                // Map the DB colors if they exist, otherwise use CATEGORY_COLORS, otherwise a default
+                const formatted = data.map(t => ({
+                    ...t,
+                    color: t.color || CATEGORY_COLORS[t.category] || '#FFF'
+                }));
+                setTables(formatted);
+            }
+            setLoading(false);
+        };
+        fetchTables();
+    }, []);
 
     // Group tables by category
     const groupedTables = React.useMemo(() => {
-        const groups = HARDCODED_TABLES.reduce((acc, table) => {
+        const groups = tables.reduce((acc, table) => {
             if (!acc[table.category]) {
                 acc[table.category] = {
                     category: table.category,
@@ -71,7 +73,7 @@ export const MapScreen = () => {
             return acc;
         }, {} as Record<string, { category: string; color: string; min_spend: number; tables: TableData[] }>);
         return Object.values(groups);
-    }, []);
+    }, [tables]);
 
     const toggleCategory = (category: string) => {
         setExpandedCategories(prev =>
@@ -108,6 +110,7 @@ export const MapScreen = () => {
         if (!selectedTable || !bookingDate || !bookingTime) return;
 
         navigation.navigate('Checkout', {
+            tableId: selectedTable.id,
             tableNumber: selectedTable.table_number,
             capacity: selectedTable.capacity || 6,
             date: bookingDate,
@@ -191,14 +194,25 @@ export const MapScreen = () => {
 
     return (
         <View style={styles.container}>
-            <FlatList
-                data={groupedTables}
-                keyExtractor={(item) => item.category}
-                renderItem={renderTableCategory}
-                ListHeaderComponent={renderHeader}
-                ListFooterComponent={renderFooter}
-                contentContainerStyle={styles.listContent}
-            />
+            {loading ? (
+                <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+            ) : (
+                <FlatList
+                    data={groupedTables}
+                    keyExtractor={(item) => item.category}
+                    renderItem={renderTableCategory}
+                    ListHeaderComponent={renderHeader}
+                    ListFooterComponent={renderFooter}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                        <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginTop: 40 }}>
+                            No tables configured yet.
+                        </Text>
+                    }
+                />
+            )}
 
             {/* Overlay Booking Information (Sticky Footer) */}
             {selectedTable && (

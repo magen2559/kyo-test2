@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmModal } from '../components/Modals';
 import { scheduleLocalFOMOAlert } from '../utils/notifications';
+import { supabase } from '../lib/supabase';
 
 const SETTING_ITEMS = [
     { id: 'notifications', title: 'PUSH NOTIFICATIONS', type: 'toggle', value: true },
@@ -28,6 +29,23 @@ export const SettingsScreen = () => {
         marketing: false,
     });
 
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data } = await supabase
+                    .from('user_profiles')
+                    .select('notification_enabled')
+                    .eq('id', user.id)
+                    .single();
+                if (data) {
+                    setSettings(prev => ({ ...prev, notifications: data.notification_enabled }));
+                }
+            }
+        };
+        fetchSettings();
+    }, []);
+
     const [confirmVisible, setConfirmVisible] = React.useState(false);
     const [confirmConfig, setConfirmConfig] = React.useState({
         title: '',
@@ -37,8 +55,19 @@ export const SettingsScreen = () => {
         onConfirm: () => { }
     });
 
-    const toggleSetting = (id: string) => {
-        setSettings(prev => ({ ...prev, [id]: !prev[id] }));
+    const toggleSetting = async (id: string) => {
+        const newVal = !settings[id];
+        setSettings(prev => ({ ...prev, [id]: newVal }));
+
+        if (id === 'notifications') {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('user_profiles')
+                    .update({ notification_enabled: newVal })
+                    .eq('id', user.id);
+            }
+        }
     };
 
     return (
@@ -93,6 +122,14 @@ export const SettingsScreen = () => {
                 <View style={styles.dangerZone}>
                     <Text style={styles.sectionHeader}>ACCOUNT</Text>
                     <View style={styles.section}>
+                        <View style={styles.settingRow}>
+                            <Text style={styles.settingTitle}>AGE VERIFICATION</Text>
+                            <View style={styles.linkRight}>
+                                <Text style={styles.settingValue}>VERIFIED 21+</Text>
+                                <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+                            </View>
+                        </View>
+                        <View style={styles.divider} />
                         <TouchableOpacity style={styles.settingRow} onPress={() => {
                             setConfirmConfig({
                                 title: 'SIGN OUT',

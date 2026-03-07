@@ -12,6 +12,8 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { LineupScreen } from '../screens/LineupScreen';
 import { EventDetailScreen } from '../screens/EventDetailScreen';
 import { CheckoutScreen } from '../screens/CheckoutScreen';
+import { TicketCheckoutScreen } from '../screens/TicketCheckoutScreen';
+import { MyTicketsScreen } from '../screens/MyTicketsScreen';
 import { VIPScreen } from '../screens/VIPScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { WalkInScreen } from '../screens/WalkInScreen';
@@ -29,6 +31,12 @@ export interface EventItem {
     image: string;
     status: 'LIMITED' | 'SOLD OUT' | 'AVAILABLE';
     is_past?: boolean;
+    is_published?: boolean;
+    description?: string;
+    lineup?: string[] | any;
+    event_date?: string;
+    venue_room?: string;
+    genre?: string;
 }
 
 export type RootStackParamList = {
@@ -38,12 +46,27 @@ export type RootStackParamList = {
     EventDetail: { event: EventItem };
     Settings: undefined;
     Checkout: {
+        tableId: string;
         tableNumber: string;
         capacity: number;
         date: string;
         time: string;
         minSpend: number;
     };
+    TicketCheckout: {
+        eventId: string;
+        eventTitle: string;
+        eventImage: string;
+        eventDate: string;
+        cart: Array<{
+            ticketTypeId: string;
+            ticketTypeName: string;
+            quantity: number;
+            priceEach: number;
+        }>;
+        totalPrice: number;
+    };
+    MyTickets: undefined;
     WalkIn: undefined;
     About: undefined;
     DigitalPass: {
@@ -156,6 +179,16 @@ export const RootNavigator = () => {
                         <Stack.Screen
                             name="AdminDashboard"
                             component={AdminDashboardScreen}
+                            options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                            name="TicketCheckout"
+                            component={TicketCheckoutScreen}
+                            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+                        />
+                        <Stack.Screen
+                            name="MyTickets"
+                            component={MyTicketsScreen}
                             options={{ headerShown: false }}
                         />
                     </>

@@ -1,54 +1,137 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, FlatList } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { theme } from '../theme';
-import { GlassHeader } from '../components/GlassHeader';
 import { GlassmorphismView } from '../components/GlassmorphismView';
 import { GoldButton } from '../components/GoldButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { fetchTicketTypes, TicketType } from '../services/ticketService';
 
 type EventDetailProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
-
-// Mock Ticket Data
-const TICKET_TIERS = [
-    { id: '1', name: 'EARLY BIRD', price: 'RM 120.00', status: 'SOLD OUT' },
-    { id: '2', name: 'PRE-SALE', price: 'RM 150.00', status: 'AVAILABLE' },
-    { id: '3', name: 'DOOR', price: 'RM 180.00', status: 'AVAILABLE' },
-];
 
 export const EventDetailScreen = ({ route, navigation }: EventDetailProps) => {
     const { event } = route.params;
     const insets = useSafeAreaInsets();
+    const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
 
-    const handleBuyTicket = () => {
-        // Placeholder for ticket checkout flow
+    useEffect(() => {
+        loadTicketTypes();
+    }, []);
+
+    const loadTicketTypes = async () => {
+        try {
+            const types = await fetchTicketTypes(event.id);
+            setTicketTypes(types);
+        } catch (err) {
+            console.error('Failed to load ticket types:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const renderTicketTier = ({ item }: { item: typeof TICKET_TIERS[0] }) => (
-        <View style={styles.ticketTier}>
-            <View>
-                <Text style={styles.ticketName}>{item.name}</Text>
-                <Text style={styles.ticketPrice}>{item.price}</Text>
+    const updateQuantity = (ticketTypeId: string, delta: number) => {
+        setSelectedTickets(prev => {
+            const current = prev[ticketTypeId] || 0;
+            const newQty = Math.max(0, Math.min(current + delta, 10)); // Max 10 per type
+            if (newQty === 0) {
+                const { [ticketTypeId]: _, ...rest } = prev;
+                return rest;
+            }
+            return { ...prev, [ticketTypeId]: newQty };
+        });
+    };
+
+    const totalTickets = Object.values(selectedTickets).reduce((sum, q) => sum + q, 0);
+    const totalPrice = ticketTypes.reduce((sum, tt) => {
+        const qty = selectedTickets[tt.id] || 0;
+        return sum + (qty * tt.price);
+    }, 0);
+
+    const handleBuyTickets = () => {
+        if (totalTickets === 0) return;
+        // Build cart and navigate to TicketCheckout
+        const cart = ticketTypes
+            .filter(tt => (selectedTickets[tt.id] || 0) > 0)
+            .map(tt => ({
+                ticketTypeId: tt.id,
+                ticketTypeName: tt.name,
+                quantity: selectedTickets[tt.id],
+                priceEach: tt.price,
+            }));
+
+        navigation.navigate('TicketCheckout', {
+            eventId: event.id,
+            eventTitle: event.title,
+            eventImage: event.image,
+            eventDate: (event as any).event_date || event.date_label,
+            cart,
+            totalPrice,
+        });
+    };
+
+    // Parse lineup
+    const lineup: string[] = Array.isArray((event as any).lineup)
+        ? (event as any).lineup
+        : [];
+
+    // Format date
+    const eventDate = (event as any).event_date
+        ? new Date((event as any).event_date).toLocaleDateString('en-MY', {
+            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+        })
+        : event.date_label;
+
+    const eventTime = (event as any).event_date
+        ? new Date((event as any).event_date).toLocaleTimeString('en-MY', {
+            hour: '2-digit', minute: '2-digit'
+        })
+        : '';
+
+    const renderTicketTier = (tt: TicketType) => {
+        const isSoldOut = tt.status === 'SOLD_OUT' || tt.remaining <= 0;
+        const qty = selectedTickets[tt.id] || 0;
+
+        return (
+            <View key={tt.id} style={styles.ticketTier}>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.ticketName}>{tt.name}</Text>
+                    <Text style={styles.ticketPrice}>RM {tt.price.toFixed(2)}</Text>
+                    {!isSoldOut && (
+                        <Text style={styles.ticketRemaining}>
+                            {tt.remaining <= 20 ? `Only ${tt.remaining} left` : `${tt.remaining} available`}
+                        </Text>
+                    )}
+                </View>
+                {isSoldOut ? (
+                    <View style={[styles.buyButtonSmall, styles.buyButtonDisabled]}>
+                        <Text style={[styles.buyButtonSmallText, styles.buyButtonDisabledText]}>SOLD OUT</Text>
+                    </View>
+                ) : (
+                    <View style={styles.quantitySelector}>
+                        <TouchableOpacity
+                            style={styles.qtyButton}
+                            onPress={() => updateQuantity(tt.id, -1)}
+                            disabled={qty === 0}
+                        >
+                            <Ionicons name="remove" size={18} color={qty === 0 ? '#444' : theme.colors.primary} />
+                        </TouchableOpacity>
+                        <Text style={styles.qtyText}>{qty}</Text>
+                        <TouchableOpacity
+                            style={styles.qtyButton}
+                            onPress={() => updateQuantity(tt.id, 1)}
+                            disabled={qty >= tt.remaining}
+                        >
+                            <Ionicons name="add" size={18} color={qty >= tt.remaining ? '#444' : theme.colors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
-            <TouchableOpacity
-                style={[
-                    styles.buyButtonSmall,
-                    item.status === 'SOLD OUT' && styles.buyButtonDisabled
-                ]}
-                disabled={item.status === 'SOLD OUT'}
-            >
-                <Text style={[
-                    styles.buyButtonSmallText,
-                    item.status === 'SOLD OUT' && styles.buyButtonDisabledText
-                ]}>
-                    {item.status === 'SOLD OUT' ? 'SOLD OUT' : 'BUY'}
-                </Text>
-            </TouchableOpacity>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -63,9 +146,6 @@ export const EventDetailScreen = ({ route, navigation }: EventDetailProps) => {
                         </TouchableOpacity>
                         <View style={styles.headerRight}>
                             <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="calendar-outline" size={24} color={theme.colors.text} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
                                 <Ionicons name="share-social-outline" size={24} color={theme.colors.text} />
                             </TouchableOpacity>
                         </View>
@@ -74,28 +154,41 @@ export const EventDetailScreen = ({ route, navigation }: EventDetailProps) => {
                         <Text style={styles.heroTitle}>{event.title}</Text>
                         <View style={styles.techDataRow}>
                             <Ionicons name="calendar" size={12} color={theme.colors.primary} />
-                            <Text style={styles.techDataText}>FRI 24 OCT</Text>
-                            <Ionicons name="time" size={12} color={theme.colors.primary} style={{ marginLeft: 12 }} />
-                            <Text style={styles.techDataText}>11:00 PM LATE</Text>
+                            <Text style={styles.techDataText}>{eventDate}</Text>
+                            {eventTime ? (
+                                <>
+                                    <Ionicons name="time" size={12} color={theme.colors.primary} style={{ marginLeft: 12 }} />
+                                    <Text style={styles.techDataText}>{eventTime}</Text>
+                                </>
+                            ) : null}
                         </View>
                     </View>
                 </ImageBackground>
 
                 <View style={styles.contentContainer}>
                     <GlassmorphismView neonBorder style={styles.infoCard}>
+                        {/* Description */}
+                        {(event as any).description ? (
+                            <>
+                                <Text style={styles.sectionTitle}>ABOUT</Text>
+                                <Text style={styles.paragraph}>{(event as any).description}</Text>
+                                <View style={styles.divider} />
+                            </>
+                        ) : null}
+
+                        {/* Lineup */}
                         <Text style={styles.sectionTitle}>LINEUP</Text>
                         <Text style={styles.paragraph}>
-                            STEPHAN BODZIN (LIVE) {'\n'}
-                            OLIVER HUNTEMANN {'\n'}
-                            VICTOR RUIZ
+                            {lineup.length > 0 ? lineup.join('\n') : 'TBA'}
                         </Text>
 
                         <View style={styles.divider} />
 
                         <Text style={styles.sectionTitle}>DETAILS</Text>
                         <Text style={styles.paragraph}>
-                            Main Room: {event.stage}{'\n'}
-                            Genre: Techno / Industrial{'\n'}
+                            {(event as any).venue_room ? `Room: ${(event as any).venue_room}\n` : ''}
+                            {(event as any).genre ? `Genre: ${(event as any).genre}\n` : ''}
+                            Stage: {event.stage}{'\n'}
                             Pace: {event.bpm}
                         </Text>
 
@@ -109,23 +202,31 @@ export const EventDetailScreen = ({ route, navigation }: EventDetailProps) => {
 
                     <Text style={styles.ticketsHeader}>TICKETS</Text>
 
-                    {TICKET_TIERS.map((tier) => (
-                        <View key={tier.id}>
-                            {renderTicketTier({ item: tier })}
-                        </View>
-                    ))}
+                    {loading ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 20 }} />
+                    ) : ticketTypes.length > 0 ? (
+                        ticketTypes.map(renderTicketTier)
+                    ) : (
+                        <Text style={styles.noTicketsText}>No tickets available for this event yet.</Text>
+                    )}
 
                     <View style={{ height: 40 }} />
                 </View>
             </ScrollView>
 
-            <View style={[styles.bottomSticky, { paddingBottom: insets.bottom || 24 }]}>
-                <GoldButton
-                    title="BUY TICKETS"
-                    onPress={handleBuyTicket}
-                    style={styles.fullWidthButton}
-                />
-            </View>
+            {totalTickets > 0 && (
+                <View style={[styles.bottomSticky, { paddingBottom: insets.bottom || 24 }]}>
+                    <View style={styles.cartSummary}>
+                        <Text style={styles.cartText}>{totalTickets} ticket{totalTickets > 1 ? 's' : ''}</Text>
+                        <Text style={styles.cartPrice}>RM {totalPrice.toFixed(2)}</Text>
+                    </View>
+                    <GoldButton
+                        title="PROCEED TO CHECKOUT"
+                        onPress={handleBuyTickets}
+                        style={styles.fullWidthButton}
+                    />
+                </View>
+            )}
         </View>
     );
 };
@@ -219,6 +320,12 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
         marginBottom: 16,
     },
+    noTicketsText: {
+        color: theme.colors.textSecondary,
+        fontFamily: theme.typography.fontFamily.regular,
+        fontSize: 14,
+        marginTop: 8,
+    },
     ticketTier: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -238,6 +345,33 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
         fontFamily: theme.typography.fontFamily.bold,
         fontSize: 18,
+    },
+    ticketRemaining: {
+        color: theme.colors.textSecondary,
+        fontFamily: theme.typography.fontFamily.monospace,
+        fontSize: 10,
+        marginTop: 2,
+    },
+    quantitySelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(197, 160, 89, 0.08)',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: 4,
+    },
+    qtyButton: {
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    qtyText: {
+        color: theme.colors.text,
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 16,
+        minWidth: 24,
+        textAlign: 'center',
     },
     buyButtonSmall: {
         backgroundColor: 'rgba(197, 160, 89, 0.1)',
@@ -266,6 +400,21 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.backgroundSecondary,
         borderTopWidth: 1,
         borderTopColor: theme.colors.border,
+    },
+    cartSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    cartText: {
+        color: theme.colors.textSecondary,
+        fontFamily: theme.typography.fontFamily.medium,
+        fontSize: 14,
+    },
+    cartPrice: {
+        color: theme.colors.primary,
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 18,
     },
     fullWidthButton: {
         width: '100%',

@@ -14,6 +14,7 @@ import { AlertModal } from '../components/Modals';
 import { supabase } from '../lib/supabase';
 
 interface CheckoutRouteParams {
+    tableId: string;
     tableNumber: string;
     capacity: number;
     date: string;
@@ -45,6 +46,7 @@ export const CheckoutScreen = () => {
     const { user } = useAuth();
 
     const params = (route.params as CheckoutRouteParams) || {
+        tableId: 'd6fb8fa0-d29d-4c3e-b5f7-f13886b4f7a1', // dummy uuid
         tableNumber: 'T-25',
         capacity: 6,
         date: 'OCT 24',
@@ -121,6 +123,8 @@ export const CheckoutScreen = () => {
 
         const { error } = await supabase.from('reservations').insert({
             user_id: user?.id || null,
+            event_id: null,
+            table_id: params.tableId,
             guests: guestCount,
             total_amount: subtotal,
             deposit_paid: depositAmount,

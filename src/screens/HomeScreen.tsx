@@ -10,6 +10,7 @@ import { EventItem } from '../navigation/RootNavigator';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { Showcase3D } from '../components/Showcase3D';
 
 const GALLERY_IMAGES = [
     { id: '1', source: require('../../assets/images/gallery/img-gallery-03.jpg'), title: 'Kyo Image 1' },
@@ -28,7 +29,7 @@ export const HomeScreen = () => {
     const videoSource = require('../../assets/videos/kyo_hero_video.mp4');
     const player = useVideoPlayer(videoSource, player => {
         player.loop = true;
-        player.muted = false; // Turned sound on per user request
+        player.muted = true; // Turned sound off per user request
         player.play();
     });
 
@@ -37,32 +38,40 @@ export const HomeScreen = () => {
             const { data, error } = await supabase
                 .from('events')
                 .select('*')
-                .limit(3)
-                .order('created_at', { ascending: true });
+                .eq('is_published', true)
+                .eq('is_past', false)
+                .limit(4)
+                .order('event_date', { ascending: true });
             if (data) setEvents(data);
         };
         fetchTopEvents();
     }, []);
 
     const renderEventCard = (event: EventItem) => (
-        <IndustrialCard key={event.id} style={styles.eventCard}>
-            <View style={styles.eventImagePlaceholder}>
-                <Image source={{ uri: event.image }} style={StyleSheet.absoluteFillObject} />
-                <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' }} />
-            </View>
-            <View style={styles.eventDetails}>
-                <Text style={styles.eventDate}>{event.date_label.replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim()}</Text>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                {event.status !== 'AVAILABLE' && (
-                    <View style={[styles.limitedTag, event.status === 'SOLD OUT' && { backgroundColor: '#333' }]}>
-                        <Text style={[styles.limitedText, event.status === 'SOLD OUT' && { color: theme.colors.textSecondary }]}>{event.status}</Text>
-                    </View>
-                )}
-                <View style={styles.bookNowContainer}>
-                    <Text style={styles.bookNowText}>BOOK NOW</Text>
+        <TouchableOpacity
+            key={event.id}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('EventDetail' as never, { event } as never)}
+        >
+            <IndustrialCard style={styles.eventCard}>
+                <View style={styles.eventImagePlaceholder}>
+                    <Image source={{ uri: event.image }} style={StyleSheet.absoluteFillObject} />
+                    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' }} />
                 </View>
-            </View>
-        </IndustrialCard>
+                <View style={styles.eventDetails}>
+                    <Text style={styles.eventDate}>{event.date_label.replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim()}</Text>
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    {event.status !== 'AVAILABLE' && (
+                        <View style={[styles.limitedTag, event.status === 'SOLD OUT' && { backgroundColor: '#333' }]}>
+                            <Text style={[styles.limitedText, event.status === 'SOLD OUT' && { color: theme.colors.textSecondary }]}>{event.status}</Text>
+                        </View>
+                    )}
+                    <View style={styles.bookNowContainer}>
+                        <Text style={styles.bookNowText}>BOOK NOW</Text>
+                    </View>
+                </View>
+            </IndustrialCard>
+        </TouchableOpacity>
     );
 
     // Auto-scroll ref
@@ -137,6 +146,9 @@ export const HomeScreen = () => {
                         </Text>
                     </View>
                 </View>
+
+                {/* 3D Showcase */}
+                <Showcase3D />
 
                 {/* Upcoming Events Carousel */}
                 <View style={[styles.sectionContainer, { marginBottom: 40 }]}>

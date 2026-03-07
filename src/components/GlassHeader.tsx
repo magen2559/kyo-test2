@@ -10,10 +10,11 @@ interface GlassHeaderProps {
     showLogo?: boolean;
     onLeftPress?: () => void;
     leftIcon?: keyof typeof Ionicons.glyphMap;
+    leftElement?: React.ReactNode;
     rightElement?: React.ReactNode;
 }
 
-export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, showLogo, onLeftPress, leftIcon, rightElement }) => {
+export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, showLogo, onLeftPress, leftIcon, leftElement, rightElement }) => {
     const insets = useSafeAreaInsets();
 
     return (
@@ -23,7 +24,11 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({ title, showLogo, onLef
             style={[styles.container, { paddingTop: insets.top }]}
         >
             <View style={styles.content}>
-                {onLeftPress ? (
+                {leftElement ? (
+                    <View style={styles.iconButton}>
+                        {leftElement}
+                    </View>
+                ) : onLeftPress ? (
                     <TouchableOpacity onPress={onLeftPress} style={styles.iconButton}>
                         <Ionicons name={leftIcon || "chevron-back"} size={24} color={theme.colors.primary} />
                     </TouchableOpacity>

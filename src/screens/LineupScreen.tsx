@@ -14,7 +14,7 @@ type LineupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 
 
 
 const INTERNATIONAL_ACTS = [
-    { id: '1', name: 'Big Shaq', image: require('../../assets/images/international_acts/act_1.jpeg') },
+    { id: '1', name: 'Wait until the drop...', image: require('../../assets/images/international_acts/act_1.jpeg') },
     { id: '2', name: 'Jazzy Jeff', image: require('../../assets/images/international_acts/act_2.jpeg') },
     { id: '3', name: 'Dash Berlin', image: require('../../assets/images/international_acts/act_3.jpeg') },
     { id: '4', name: 'Kid Ink', image: require('../../assets/images/international_acts/act_4.jpeg') },
@@ -26,25 +26,11 @@ const INTERNATIONAL_ACTS = [
     { id: '10', name: 'Act 10', image: require('../../assets/images/international_acts/act_10.jpeg') },
 ];
 
-type StaticEventInfo = { id: string; name: string; date: string; image: any; };
-const STATIC_EVENTS: StaticEventInfo[] = [
-    { id: '1', name: 'Hotel Amour presents Baby J', date: '13.02.25', image: require('../../assets/images/events/event_1.jpeg') },
-    { id: '2', name: 'TWP - HUGEL', date: '23.01.25', image: require('../../assets/images/events/event_2.jpeg') },
-    { id: '3', name: 'COSMIC', date: '24.12.24 - 31.12.24', image: require('../../assets/images/events/event_3.jpeg') },
-    { id: '4', name: 'COSMIC CHRISTMAS', date: '24.12.24 - 25.12.24', image: require('../../assets/images/events/event_4.jpeg') },
-    { id: '5', name: 'COUP. ELEXSANDOM', date: '19.12.24', image: require('../../assets/images/events/event_5.jpeg') },
-    { id: '6', name: 'AHMED ROMEL', date: '5.12.24', image: require('../../assets/images/events/event_6.jpeg') },
-    { id: '7', name: 'YUNG SINGH', date: '28.11.24', image: require('../../assets/images/events/event_7.jpeg') },
-    { id: '8', name: 'THE TEMPLE - KIM SHE B2B AYLIN', date: '21.11.24', image: require('../../assets/images/events/event_8.jpeg') },
-    { id: '9', name: 'KING PROMISE LIVE', date: '17.10.24', image: require('../../assets/images/events/event_9.jpeg') },
-    { id: '10', name: 'MAJOR LEAGUE DJZ LIVE', date: '26.09.24', image: require('../../assets/images/events/event_10.jpeg') },
-];
-
 export const LineupScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<LineupScreenNavigationProp>();
 
-    const [activeFilter, setActiveFilter] = useState('Events');
+    const [activeFilter, setActiveFilter] = useState('Upcoming');
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [events, setEvents] = useState<EventItem[]>([]);
@@ -117,12 +103,14 @@ export const LineupScreen = () => {
     );
 
     const filteredEvents = events.filter(event => {
+        if (!event.is_published) return false;
+
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
         let matchesFilter = true;
 
-        if (activeFilter === 'Upcoming Events') {
+        if (activeFilter === 'Upcoming') {
             matchesFilter = !event.is_past;
-        } else if (activeFilter === 'Events') {
+        } else if (activeFilter === 'Past') {
             matchesFilter = !!event.is_past;
         }
 
@@ -146,6 +134,21 @@ export const LineupScreen = () => {
                         />
                     </View>
                 </View>
+                <View style={styles.filterContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                        {['All', 'Upcoming', 'Past'].map(filter => (
+                            <TouchableOpacity
+                                key={filter}
+                                style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
+                                onPress={() => setActiveFilter(filter)}
+                            >
+                                <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
+                                    {filter.toUpperCase()}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
             </View>
 
             <ScrollView
@@ -155,7 +158,7 @@ export const LineupScreen = () => {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
                 }
             >
-                {activeFilter === 'Events' && (
+                {activeFilter === 'Past' && (
                     <View style={styles.internationalActsSection}>
                         <View style={styles.internationalActsDivider} />
                         <Text style={styles.internationalActsHeader}>
@@ -172,26 +175,12 @@ export const LineupScreen = () => {
                     </View>
                 )}
 
-                {activeFilter === 'Events' && (
-                    <View style={styles.eventsHeaderSection}>
-                        <View style={styles.eventsDivider} />
-                        <Text style={styles.eventsHeader}>EVENTS</Text>
-                    </View>
-                )}
-
-                {activeFilter === 'Events' && STATIC_EVENTS.map((event) => (
-                    <View key={event.id} style={styles.staticEventCard}>
-                        <Image source={event.image} style={styles.staticEventImage} />
-                        <Text style={styles.staticEventName} numberOfLines={2}>{event.name}</Text>
-                        <View style={styles.staticEventDateRow}>
-                            <Ionicons name="calendar-outline" size={14} color="#fff" />
-                            <Text style={styles.staticEventDate}>{event.date}</Text>
-                        </View>
-                        <TouchableOpacity style={styles.staticEventButton}>
-                            <Text style={styles.staticEventButtonText}>VIEW MORE</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))}
+                <View style={styles.eventsHeaderSection}>
+                    <View style={styles.eventsDivider} />
+                    <Text style={styles.eventsHeader}>
+                        {activeFilter === 'Upcoming' ? 'UPCOMING EVENTS' : activeFilter === 'Past' ? 'PAST EVENTS' : 'ALL EVENTS'}
+                    </Text>
+                </View>
 
                 {filteredEvents.map(renderEvent)}
             </ScrollView>

@@ -86,16 +86,20 @@ export const AdminDashboardScreen = () => {
                 Alert.alert(
                     'WALK-IN VERIFIED',
                     `Valid for ${guestCount} pax.\nTimestamp check passed.`,
-                    [{ text: 'CHECK IN', onPress: () => processCheckIn(bookingId) }]
+                    [{ text: 'DONE', style: 'cancel' }]
+                );
+            } else if (parts[1] === 'TCK') {
+                // Ticket logic
+                // Format: kyo-TCK-TIMESTAMP-USERID
+                const ticketId = `TCK-${parts[2]}`;
+                Alert.alert(
+                    'TICKET DETECTED',
+                    `ID: ${ticketId}\nVerifying with database...`,
+                    [{ text: 'VERIFY', onPress: () => verifyTicket(ticketId) }]
                 );
             } else {
                 // Regular booking logic
                 // Format: kyo-BK-TIMESTAMP-USERID
-                // Parts:
-                // 0: kyo
-                // 1: BK
-                // 2: TIMESTAMP
-                // 3: USERID
                 const bookingId = `${parts[1]}-${parts[2]}`; // BK-Timestamp
                 Alert.alert(
                     'BOOKING DETECTED',
@@ -110,11 +114,80 @@ export const AdminDashboardScreen = () => {
         }
     };
 
+    const logEntry = async (ticketId: string | null, reservationId: string | null, eventId: string | null, result: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !eventId) return; // Need staff id and event id at minimum
+
+        await supabase.from('entry_logs').insert({
+            ticket_id: ticketId,
+            reservation_id: reservationId,
+            event_id: eventId,
+            staff_user_id: user.id,
+            result: result
+        });
+    };
+
+    const verifyTicket = async (ticketId: string) => {
+        setIsProcessing(true);
+        const { data, error } = await supabase
+            .from('tickets')
+            .select('*, ticket_types(name), events(id, title)')
+            .like('qr_code_data', `%${ticketId}%`)
+            .single();
+
+        setIsProcessing(false);
+
+        if (error || !data) {
+            Alert.alert('NOT FOUND', 'Could not find a ticket matching this QR code.');
+            return;
+        }
+
+        if (data.status === 'USED') {
+            await logEntry(data.id, null, data.event_id, 'DUPLICATE');
+            Alert.alert('ALREADY USED', `Ticket ${ticketId} has already been scanned.`);
+            return;
+        }
+
+        if (data.status === 'CANCELLED') {
+            await logEntry(data.id, null, data.event_id, 'DENIED');
+            Alert.alert('CANCELLED', `Ticket ${ticketId} is cancelled.`);
+            return;
+        }
+
+        Alert.alert(
+            'TICKET FOUND',
+            `Event: ${data.events?.title}\nType: ${data.ticket_types?.name}`,
+            [
+                { text: 'CANCEL', style: 'cancel' },
+                { text: 'CHECK IN', onPress: () => processTicketCheckIn(data) }
+            ]
+        );
+    };
+
+    const processTicketCheckIn = async (ticket: any) => {
+        setIsProcessing(true);
+
+        const { error: updateError } = await supabase
+            .from('tickets')
+            .update({ status: 'USED', used_at: new Date().toISOString() })
+            .eq('id', ticket.id);
+
+        if (updateError) {
+            setIsProcessing(false);
+            Alert.alert('ERROR', 'Failed to check in ticket.');
+            return;
+        }
+
+        await logEntry(ticket.id, null, ticket.event_id, 'APPROVED');
+        setIsProcessing(false);
+        Alert.alert('SUCCESS', 'Ticket has been checked in.');
+    };
+
     const verifyBooking = async (bookingId: string) => {
         setIsProcessing(true);
         const { data, error } = await supabase
             .from('reservations')
-            .select('*')
+            .select('*, events(id, title)')
             .like('qr_code_data', `%${bookingId}%`) // Match any QR containing this booking ID
             .single();
 
@@ -126,32 +199,34 @@ export const AdminDashboardScreen = () => {
         }
 
         if (data.status === 'CHECKED_IN') {
+            await logEntry(null, data.id, data.event_id, 'DUPLICATE');
             Alert.alert('ALREADY CHECKED IN', `Booking ${bookingId} was already checked in.`);
             return;
         }
 
         Alert.alert(
             'BOOKING FOUND',
-            `Guests: ${data.guests}\nType: ${data.type}`,
+            `Event: ${data.events?.title || 'No Event'}\nGuests: ${data.guests}\nType: ${data.type}`,
             [
                 { text: 'CANCEL', style: 'cancel' },
-                { text: 'CHECK IN', onPress: () => processCheckIn(bookingId) }
+                { text: 'CHECK IN', onPress: () => processCheckIn(data) }
             ]
         );
     };
 
-    const processCheckIn = async (bookingId: string) => {
+    const processCheckIn = async (reservation: any) => {
         setIsProcessing(true);
         const { error } = await supabase
             .from('reservations')
             .update({ status: 'CHECKED_IN' })
-            .like('qr_code_data', `%${bookingId}%`); // Update by matching the booking ID inside the QR text
-
-        setIsProcessing(false);
+            .eq('id', reservation.id);
 
         if (error) {
+            setIsProcessing(false);
             Alert.alert('ERROR', 'Failed to check in guest. Please try again.');
         } else {
+            await logEntry(null, reservation.id, reservation.event_id, 'APPROVED');
+            setIsProcessing(false);
             Alert.alert('SUCCESS', 'Guest has been checked in.');
             fetchGuests(); // Refresh the list
         }
